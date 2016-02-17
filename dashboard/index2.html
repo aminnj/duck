@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>autoTuple Monitoring</title>
+        <link rel="icon" type="image/png" sizes="96x96" href="images/favicon.png">
+        <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+        <link rel="stylesheet" href="style.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+        <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+        <!-- <script src="main.js"></script> -->
+        <!-- <script type="text/javascript" src="test.json"></script> -->
+
+
+        <script>
+
+            /*$(function() {
+                $( "#pbar" ).progressbar({
+                    max: 100,
+                    value: 37,
+                });
+            });*/
+
+        </script>
+
+    </head>
+
+    <body>
+
+
+        <script>
+
+            /*function test() {
+
+                $("#pbar").progressbar("option","value",Math.random()*100);
+                var color = '#00C853';
+
+                console.log($("#pbar").progressbar("value"));
+                var frac = $("#pbar").progressbar("value") / 100;
+                var color = 'hsl(' + frac*120 + ', 90%, 50%)';
+
+                $("#pbar").find(".ui-progressbar-value").css({"background": color});
+                $("#test").text("Copying [97%]");
+            }*/
+
+
+            function getProgress(sample) {
+                var stat = sample["status"];
+                var done = sample["done"];
+                var tot = sample["total"];
+
+                if (stat == "new") return 0.0;
+                else if (stat == "submitting") return 5.0;
+                else if (stat == "crab") return 5.0 + 40.0*(done/tot);
+                else if (stat == "mergelists") return 45.0;
+                else if (stat == "postprocessing") return 55.0 + 35.0*(done/tot);
+                else if (stat == "copying") return 95.0;
+                else if (stat == "done") return 100.0;
+                else return -1.0;
+
+            }
+
+            function parseJson(data) {
+
+                for(var i = 0; i < data["samples"].length; i++) {
+                    console.log(data["samples"][i]);
+                    var container = $("#section1");
+                    container.append("<br>");
+                    container.append("<span class='thick'>"+data["samples"][i]["name"]+"</span>");
+                    container.append("<div class='pbar' id='pbar_"+i+"'><span id='pbartext_"+i+"' class='pbartext'></span></div>");
+                    container.append("<br><div id='details_"+i+"'></div>");
+                    container.append("<br>");
+
+                    $( "#pbar_"+i ).progressbar({max: 100, value: 37});
+
+                    //var pct = getProgress(data["samples"][i]);
+                    var pct = Math.round(getProgress(data["samples"][i]));
+
+                    $("#pbar_"+i).progressbar("option","value",pct);
+                    // var color = '#00C853';
+                    // var frac = $("#pbar_"+i).progressbar("value") / 100.0;
+                    var color = 'hsl(' + pct*1.2 + ', 70%, 50%)';
+                    $("#pbar_"+i).find(".ui-progressbar-value").css({"background": color});
+
+                    $("#details_"+i).text(JSON.stringify(data["samples"][i]));
+
+                    $("#pbartext_"+i).text(data["samples"][i]["status"] + " [" + pct + "%]");
+
+                }
+
+            }
+
+
+            $(function () {
+                // $.getJSON("http://uaf-6.t2.ucsd.edu/~namin/dump/test.json", function(data) { parseJson(data); });
+                // WOW CAN PUT EXTERNAL URLS HERE MAN!
+                $.getJSON("test.json", function(data) { parseJson(data); });
+            })
+
+
+
+        </script>
+
+
+
+        <div id="topBar">
+            <!-- <img class="moneylogo" id="logo" src="images/moneybottlelogo.png" /> -->
+            <img class="mainlogo" src="crab.png" />
+            <span class="thin">auto</span>Tupler
+            <span class="thin">
+                &emsp;
+                <a href="#" onClick="$('#section1').slideToggle(250)">section1</a>&ensp;|&ensp;
+                <a href="#" onClick="$('#section2').slideToggle(250)">section2</a>&ensp;|&ensp;
+                <a href="#" onClick="$('#section3').slideToggle(250)">section3</a>
+            </span>
+        </div>
+        <div id="colorstrip"></div>
+
+        <div id="container">
+
+            <!-- <div class="pbar" id="pbar"><span id="test" class="pbartext">Post-processing [45%]</span> </div> -->
+
+            <!-- <button id="colorButton" onClick="test();">Random Color</button> -->
+
+            <div id="section1" class="section"                      > section1 </div>
+            <div id="section2" class="section" style='display:none;'> section2 </div>
+            <div id="section3" class="section" style='display:none;'> section3 </div>
+
+        </div>
+
+    </body>
+</html>
