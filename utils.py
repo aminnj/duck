@@ -2,26 +2,35 @@ import os
 import sys
 import commands
 
-def do(cmd, returnStatus=False):
+def get(cmd, returnStatus=False):
+    status, out = commands.getstatusoutput(cmd)
+    if returnStatus: return status, out
+    else: return out
+
+def cmd(cmd, returnStatus=False):
     status, out = commands.getstatusoutput(cmd)
     if returnStatus: return status, out
     else: return out
 
 def proxy_hours_left():
     try:
-        info = do("voms-proxy-info")
+        info = get("voms-proxy-info")
         hours = int(info.split("timeleft")[-1].strip().split(":")[1])
     except: hours = 0
     return hours
 
+
 def proxy_renew():
     # http://www.t2.ucsd.edu/tastwiki/bin/view/CMS/LongLivedProxy
     cert_file = "/home/users/{0}/.globus/proxy_for_{0}.file".format(os.getenv("USER"))
-    if os.path.exists(cert_file): do("voms-proxy-init -q -voms cms -hours 120 -valid=120:0 -cert=%s" % cert_file)
-    else: do("voms-proxy-init -hours 9876543:0 -out=%s" % cert_file)
+    if os.path.exists(cert_file): cmd("voms-proxy-init -q -voms cms -hours 120 -valid=120:0 -cert=%s" % cert_file)
+    else: cmd("voms-proxy-init -hours 9876543:0 -out=%s" % cert_file)
+
+def get_proxy_file():
+    cert_file = "/home/users/{0}/.globus/proxy_for_{0}.file".format(os.getenv("USER"))
+    return cert_file
 
 def dataset_event_count(dataset):
-    do(". /cvmfs/cms.cern.ch/crab3/crab-env-bootstrap.sh >& /dev/null")
     from dbs.apis.dbsClient import DbsApi
     url="https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
     api=DbsApi(url=url)
