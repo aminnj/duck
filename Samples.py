@@ -6,6 +6,7 @@ try:
     from CRABAPI.RawCommand import crabCommand
     from CRABClient.UserUtilities import setConsoleLogLevel
     from CRABClient.ClientUtilities import LOGLEVEL_MUTE
+    from ROOT import TFile, TH1F
 except:
     print ">>> Make sure to source setup.sh first!"
 
@@ -18,6 +19,8 @@ class Sample:
 
         self.fake_submission = True
         self.fake_status = True
+        self.fake_crab_done = False
+        self.fake_legit_sweeproot = True
         self.fake_miniaod_map = True
 
         self.pfx_pset = './pset/'
@@ -38,6 +41,8 @@ class Sample:
                 "datetime" : None, # "160220_151313" from crab request name
                 "crab": { }, # crab task information here
                 "ijob_to_miniaod": { }, # map from ijob to list of miniaod
+                "imerged_to_ijob": { }, # map from imerged to iunmerged
+                "ijob_to_nevents": { }, # map from ijob to (nevents, nevents_eff)
                 }
         self.sample["shortname"] = dataset.split("/")[1]+"_"+dataset.split("/")[2]
         self.sample["requestname"] = self.sample["shortname"][:99] # damn crab has size limit for name
@@ -47,6 +52,9 @@ class Sample:
 
         self.crab_config = None
         self.crab_status_res = { }
+
+        self.rootfiles = []
+        self.logfiles = []
 
 
         self.pfx = self.sample["shortname"][:10]
@@ -156,6 +164,7 @@ class Sample:
         try:
             if self.fake_submission:
                 out = {'uniquerequestname': '160220_081846:namin_crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1', 'requestname': 'crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1'}
+                # out = {'uniquerequestname': '160220_235605:namin_crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1', 'requestname': 'crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1'}
             else:
                 out = crabCommand('submit', config = self.crab_config, proxy=u.get_proxy_file())
             datetime = out["uniquerequestname"].split(":")[0]
@@ -227,11 +236,12 @@ class Sample:
             self.sample["crab"][k] = d_crab[k]
 
     def crab_is_done(self):
+        if self.fake_crab_done: return True
         if not self.sample["crab"]["status"] == "COMPLETED": return False
         njobs = self.sample["crab"]["njobs"]
-        rootfiles = glob.glob(self.sample["crab"]["outputdir"] + "/*.root")
-        logfiles = glob.glob(self.sample["crab"]["outputdir"] + "/log/*.tar.gz")
-        if njobs == len(rootfiles) and njobs == len(logfiles):
+        self.rootfiles = glob.glob(self.sample["crab"]["outputdir"] + "/*.root")
+        self.logfiles = glob.glob(self.sample["crab"]["outputdir"] + "/log/*.tar.gz")
+        if njobs == len(self.rootfiles) and njobs == len(self.logfiles):
             return True
 
         print "[%s] ERROR: crab says COMPLETED but not all files are there:" % (self.pfx)
@@ -252,8 +262,7 @@ class Sample:
                     8: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/E80D9307-CA6D-E511-A3A7-003048FFCB96.root']
                 }
             else:
-                logfiles = glob.glob(self.sample["crab"]["outputdir"] + "/log/*.tar.gz")
-                for logfile in logfiles:
+                for logfile in self.logfiles:
                     with  tarfile.open(logfile, "r:gz") as tar:
                         for member in tar:
                             if "FrameworkJobReport" not in member.name: continue
@@ -265,6 +274,47 @@ class Sample:
                             fh.close()
                             break
 
+    def get_rootfile_info(self, fname):
+        if self.fake_legit_sweeproot: return (False, 1000, 900, 2.0)
+
+        f = TFile.Open(fname,"READ")
+        treename = "Events"
+
+        if not f or f.IsZombie(): return (True, 0, 0, 0)
+
+        tree = f.Get(treename)
+        n_entries = tree.GetEntriesFast()
+        if n_entries == 0: return (True, 0, 0, 0)
+
+        pos_weight = tree.Draw("1", "genps_weight>0")
+        neg_weight = n_entries - pos_weight
+        n_entries_eff = pos_weight - neg_weight
+
+        h_pfmet = TH1F("h_pfmet", "h_pfmet", 100, 0, 1000);
+        tree.Draw("evt_pfmet >> h_pfmet")
+        avg_pfmet = h_pfmet.GetMean()
+        if avg_pfmet < 0.01 or avg_pfmet > 10000: return (True, 0, 0, 0)
+
+        return (False, n_entries, n_entries_eff, f.GetSize()/1.0e9)
+
+    def make_merging_chunks(self):
+        if not self.sample["imerged_to_ijob"]: 
+            group, groups = [], []
+            tot_size = 0.0
+            for rfile in self.rootfiles:
+                is_bad, nevents, nevents_eff, file_size = self.get_rootfile_info(rfile)
+                ijob = int(rfile.split("_")[-1].replace(".root",""))
+                self.sample["ijob_to_nevents"][ijob] = [nevents, nevents_eff]
+                if is_bad: continue
+                tot_size += file_size
+                group.append(ijob)
+                if tot_size >= 5.0: # in GB!
+                    groups.append(group)
+                    group = []
+                    tot_size = 0.0
+            if len(group) > 0: groups.append(group) # finish up last group
+            for igp,gp in enumerate(groups):
+                self.sample["imerged_to_ijob"][igp+1] = gp
 
 
 if __name__=='__main__':
@@ -279,7 +329,6 @@ if __name__=='__main__':
     s = Sample(**stuff)
     # s["sparms"] = ["mlsp","mstop "]
     s["pset"] = params.pset_mc # FIXME figure out which one automatically
-    # print s
 
     s.copy_jecs()
     s.make_crab_config()
@@ -292,6 +341,9 @@ if __name__=='__main__':
     if s.crab_is_done():
         s.make_miniaod_map()
 
-    # print s["ijob_to_miniaod"]
+    s.make_merging_chunks()
 
-    print s
+    print s["imerged_to_ijob"]
+    print s["ijob_to_nevents"]
+
+    pprint.pprint( s.sample )
