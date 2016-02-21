@@ -1,4 +1,5 @@
-import os, sys, datetime, ast, pprint
+import os, sys, glob
+import datetime, ast, tarfile, pprint
 
 try:
     from WMCore.Configuration import Configuration
@@ -17,6 +18,7 @@ class Sample:
 
         self.fake_submission = True
         self.fake_status = True
+        self.fake_miniaod_map = True
 
         self.pfx_pset = './pset/'
         self.pfx_crab = './crab/'
@@ -34,12 +36,14 @@ class Sample:
                 "pset": "", # *_cfg.py pset location
                 "status" : "created", # general sample status
                 "datetime" : None, # "160220_151313" from crab request name
-                "crab": { } # crab task information here
+                "crab": { }, # crab task information here
+                "ijob_to_miniaod": { }, # map from ijob to list of miniaod
                 }
         self.sample["shortname"] = dataset.split("/")[1]+"_"+dataset.split("/")[2]
         self.sample["requestname"] = self.sample["shortname"][:99] # damn crab has size limit for name
-        self.sample["craboutput"] = None
-        self.sample["crablocation"] = self.pfx_crab+"crab_"+self.sample["requestname"]
+
+        self.sample["crab"]["outputdir"] = None
+        self.sample["crab"]["taskdir"] = self.pfx_crab+"crab_"+self.sample["requestname"]
 
         self.crab_config = None
         self.crab_status_res = { }
@@ -63,7 +67,7 @@ class Sample:
         if self.sample["crab"]:
             buff += "[%s]   CRAB status %s for %i jobs using schedd %s\n" \
                     % (self.pfx, self.sample["crab"]["status"], self.sample["crab"]["njobs"], self.sample["crab"]["schedd"])
-            buff += "[%s]   Output dir: %s\n" % (self.pfx, self.sample["craboutput"])
+            buff += "[%s]   Output dir: %s\n" % (self.pfx, self.sample["crab"]["outputdir"])
             for cstat, num in self.sample["crab"]["breakdown"].items():
                 if num == 0: continue
                 buff += "[%s]     %s: %i\n" % (self.pfx, cstat, num)
@@ -138,15 +142,15 @@ class Sample:
 
     def crab_kill(self):
         try:
-            out = crabCommand('kill', dir=self.sample["crablocation"], proxy=u.get_proxy_file())
+            out = crabCommand('kill', dir=self.sample["crab"]["taskdir"], proxy=u.get_proxy_file())
         except Exception as e:
             print "[%s] ERROR killing:" % self.pfx, e
             return 0
         return out["status"] == "SUCCESS"
 
     def crab_delete_dir(self):
-        print "Deleting %s" % self.sample["crablocation"]
-        os.system("rm -rf %s" % self.sample["crablocation"])
+        print "Deleting %s" % self.sample["crab"]["taskdir"]
+        os.system("rm -rf %s" % self.sample["crab"]["taskdir"])
 
     def crab_submit(self):
         try:
@@ -157,7 +161,7 @@ class Sample:
             datetime = out["uniquerequestname"].split(":")[0]
             self.sample["datetime"] = datetime
             # FIXME deal with files in .../0001/ and so on
-            self.sample["craboutput"] = "/hadoop/cms/store/user/%s/%s/crab_%s/%s/0000/" \
+            self.sample["crab"]["outputdir"] = "/hadoop/cms/store/user/%s/%s/crab_%s/%s/0000/" \
                     % (self.sample["user"], self.sample["dataset"].split("/")[1], self.sample["requestname"], datetime)
             return 1 # succeeded
         except Exception as e:
@@ -180,7 +184,7 @@ class Sample:
                      'jobsPerStatus': {'finished': 8}, 'outdatasets': None, 'publication': {}, 'publicationFailures': {}, 'schedd': 'crab3-1@submit-5.t2.ucsd.edu',
                      'status': 'COMPLETED', 'statusFailureMsg': '', 'taskFailureMsg': '', 'taskWarningMsg': [], 'totalJobdefs': 0} 
             else:
-                out = crabCommand('status', dir=self.sample["crablocation"], proxy=u.get_proxy_file())
+                out = crabCommand('status', dir=self.sample["crab"]["taskdir"], proxy=u.get_proxy_file())
             self.crab_status_res = out
             return 1 # succeeded
         except Exception as e:
@@ -218,7 +222,49 @@ class Sample:
             d_crab["commonerror"] = "%i jobs (%.1f%%) failed with error code %s: %s" \
                     % (count, 100.0*count/d_crab["njobs"], most_common_error_code, most_common_detail)
 
-        self.sample["crab"] = d_crab.copy()
+        # extend the crab dict with these new values we just got
+        for k in d_crab:
+            self.sample["crab"][k] = d_crab[k]
+
+    def crab_is_done(self):
+        if not self.sample["crab"]["status"] == "COMPLETED": return False
+        njobs = self.sample["crab"]["njobs"]
+        rootfiles = glob.glob(self.sample["crab"]["outputdir"] + "/*.root")
+        logfiles = glob.glob(self.sample["crab"]["outputdir"] + "/log/*.tar.gz")
+        if njobs == len(rootfiles) and njobs == len(logfiles):
+            return True
+
+        print "[%s] ERROR: crab says COMPLETED but not all files are there:" % (self.pfx)
+        print "[%s] # jobs, # root files, # log files = " % (self.pfx, njobs, len(rootfiles), len(logfiles))
+        return False
+
+    def make_miniaod_map(self):
+        if not self.sample["ijob_to_miniaod"]:
+            if self.fake_miniaod_map:
+                self.sample["ijob_to_miniaod"] = {
+                    1: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/065D3D09-CA6D-E511-A59C-D4AE526A0461.root'],
+                    2: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/20FF3B81-C96D-E511-AAB8-441EA17344AC.root'],
+                    3: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/2EF6C807-CA6D-E511-A9EE-842B2B758AD8.root'],
+                    4: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/30FDAF08-CA6D-E511-828C-D4AE526A0C7A.root'],
+                    5: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/4A1B071A-CA6D-E511-8D8E-441EA1733FD6.root'],
+                    6: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/90D98A05-CA6D-E511-B721-00266CFFBDB4.root'],
+                    7: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/A8935398-C96D-E511-86FA-1CC1DE18CFF0.root'],
+                    8: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/E80D9307-CA6D-E511-A3A7-003048FFCB96.root']
+                }
+            else:
+                logfiles = glob.glob(self.sample["crab"]["outputdir"] + "/log/*.tar.gz")
+                for logfile in logfiles:
+                    with  tarfile.open(logfile, "r:gz") as tar:
+                        for member in tar:
+                            if "FrameworkJobReport" not in member.name: continue
+                            jobnum = int(member.name.split("-")[1].split(".xml")[0])
+                            fh = tar.extractfile(member)
+                            lines = [line for line in fh.readlines() if "<PFN>" in line and "/store/" in line]
+                            miniaod = list(set(map(lambda x: "/store/"+x.split("</PFN>")[0].split("/store/")[1], lines)))
+                            self.sample["ijob_to_miniaod"][jobnum] = miniaod
+                            fh.close()
+                            break
+
 
 
 if __name__=='__main__':
@@ -239,8 +285,13 @@ if __name__=='__main__':
     s.make_crab_config()
     s.make_pset()
 
-    print s.crab_submit()
+    s.crab_submit()
     if s.crab_status():
         s.crab_parse_status()
+
+    if s.crab_is_done():
+        s.make_miniaod_map()
+
+    # print s["ijob_to_miniaod"]
 
     print s
