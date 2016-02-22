@@ -18,7 +18,7 @@ class Sample:
     def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, xsec=None):
 
         self.fake_submission = True
-        self.fake_status = True
+        self.fake_status = False
         self.fake_crab_done = False
         self.fake_legit_sweeproot = True
         self.fake_miniaod_map = True
@@ -35,9 +35,10 @@ class Sample:
                 "kfact" : kfact,
                 "efact" : efact,
                 "xsec" : xsec,
-                "sparms": [], # always keep as list
+                "sparms": [], # always keep as list. e.g., ["mlsp","mstop"]
+                "isdata": False, # by default, MC
                 "pset": "", # *_cfg.py pset location
-                "status" : "created", # general sample status
+                "status" : "new", # general sample status
                 "datetime" : None, # "160220_151313" from crab request name
                 "crab": { }, # crab task information here
                 "ijob_to_miniaod": { }, # map from ijob to list of miniaod
@@ -81,6 +82,14 @@ class Sample:
                 buff += "[%s]     %s: %i\n" % (self.pfx, cstat, num)
         return buff
 
+    def which_pset(self):
+        if self.sample["dataset"].endswith("SIM"):
+            self.sample["pset"] = params.pset_mc
+        if self.sample["dataset"].startswith("/SMS") or len(self.sample["sparms"]) > 0:
+            self.sample["pset"] = params.pset_mc_fastsim
+        if self.sample["isdata"]:
+            self.sample["pset"] = params.pset_data
+
     def make_crab_config(self):
         if self.crab_config is not None: 
             print "[%s] crab config already made, not remaking" % self.pfx
@@ -115,6 +124,7 @@ class Sample:
         if os.path.isfile(pset_out_fname): 
             print "[%s] pset already made, not remaking" % self.pfx
             return
+
         if not os.path.isfile(pset_in_fname):
             print "[%s] skeleton pset %s does not exist!" % (self.pfx, pset_in_fname)
             return
@@ -130,7 +140,10 @@ class Sample:
                 elif ".GlobalTag." in line: line = line.split("=")[0]+" = '"+self.sample["gtag"]+"'\n"
                 elif ".reportEvery" in line: line = line.split("=")[0]+" = 1000\n"
                 elif ".eventMaker.datasetName." in line: line = line.split("(")[0]+"('%s')\n" % self.sample["dataset"]
-                elif ".eventMaker.CMS3tag." in line: line = line.split("(")[0]+"('%s')\n" % self.sample["cms3tag"]
+                elif "cms.Path" in line:
+                    newlines.append( "process.eventMaker.datasetName = cms.string(\"%s\")\n" % self.sample["dataset"] )
+                    newlines.append( "process.eventMaker.CMS3tag = cms.string(\"%s\")\n\n" % self.sample["cms3tag"] )
+
                 newlines.append(line)
                 
             sparms = self.sample["sparms"]
@@ -161,10 +174,14 @@ class Sample:
         os.system("rm -rf %s" % self.sample["crab"]["taskdir"])
 
     def crab_submit(self):
+        if "uniquerequestname" in self.sample["crab"]:
+            print "[%s] already submitted jobs" % self.pfx
+            return 1
+
         try:
             if self.fake_submission:
-                out = {'uniquerequestname': '160220_081846:namin_crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1', 'requestname': 'crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1'}
-                # out = {'uniquerequestname': '160220_235605:namin_crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1', 'requestname': 'crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1'}
+                # out = {'uniquerequestname': '160220_081846:namin_crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1', 'requestname': 'crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1'}
+                out = {'uniquerequestname': '160222_012655:namin_crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1', 'requestname': 'crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1'}
             else:
                 out = crabCommand('submit', config = self.crab_config, proxy=u.get_proxy_file())
             datetime = out["uniquerequestname"].split(":")[0]
@@ -172,6 +189,7 @@ class Sample:
             # FIXME deal with files in .../0001/ and so on
             self.sample["crab"]["outputdir"] = "/hadoop/cms/store/user/%s/%s/crab_%s/%s/0000/" \
                     % (self.sample["user"], self.sample["dataset"].split("/")[1], self.sample["requestname"], datetime)
+            print "[%s] submitted jobs. uniquerequestname: %s" % (self.pfx, out["uniquerequestname"])
             return 1 # succeeded
         except Exception as e:
             print "[%s] ERROR submitting:" % self.pfx, e
@@ -202,17 +220,23 @@ class Sample:
 
     def crab_parse_status(self):
         stat = self.crab_status_res
-        d_crab = {
-            "status": stat.get("status"),
-            "commonerror": None,
-            "schedd": stat.get("schedd"),
-            "njobs": len(stat["jobs"]),
-            "time": int(datetime.datetime.now().strftime("%s")),
-            "breakdown": {
-                "unsubmitted": 0, "idle": 0, "running": 0, "failed": 0,
-                "transferring": 0, "transferred": 0, "cooloff": 0, "finished": 0,
+        try:
+            d_crab = {
+                "status": stat.get("status"),
+                "commonerror": None,
+                "schedd": stat.get("schedd"),
+                "njobs": len(stat["jobs"]),
+                "time": int(datetime.datetime.now().strftime("%s")),
+                "breakdown": {
+                    "unsubmitted": 0, "idle": 0, "running": 0, "failed": 0,
+                    "transferring": 0, "transferred": 0, "cooloff": 0, "finished": 0,
+                }
             }
-        }
+            self.sample["status"] = "crab"
+        except:
+            # must be the case that not all this info exists because it was recently submitted
+            print "[%s] can't get status right now (job is probably too new)" % (self.pfx)
+            return
 
         # population of each status (running, failed, etc.)
         for status,jobs in stat["jobsPerStatus"].items():
@@ -298,6 +322,7 @@ class Sample:
         return (False, n_entries, n_entries_eff, f.GetSize()/1.0e9)
 
     def make_merging_chunks(self):
+        self.sample["status"] = "mergelists"
         if not self.sample["imerged_to_ijob"]: 
             group, groups = [], []
             tot_size = 0.0
@@ -318,17 +343,37 @@ class Sample:
 
 
 if __name__=='__main__':
-    stuff = {
+
+    s = Sample( **{
               "dataset": "/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/MINIAODSIM",
               "gtag": "74X_mcRun2_asymptotic_v2",
               "kfact": 1.0,
               "efact": 1.0,
-              "xsec": 0.0123,
-              }
+              "xsec": 0.0234,
+              } )
 
-    s = Sample(**stuff)
-    # s["sparms"] = ["mlsp","mstop "]
-    s["pset"] = params.pset_mc # FIXME figure out which one automatically
+    # flowchart:
+    # === status: created
+    # 0) renew proxy
+    # 1) copy jecs, make crab config, make pset
+    #
+    # === status: crab
+    # 2) submit crab jobs and get status
+    # 3) keep getting status until crab_is_done
+    #
+    # ===> status: mergelists
+    # 4) make miniaod map, make merging chunks
+    #
+    # === status: postprocessing
+    # 5) submit merging jobs
+    # 6) check merge output and re-submit outstanding jobs until all done
+    # 7) checkCMS3
+    # 8) make meta data
+    #
+    # === status: copying
+    # 9) copy to final resting place
+    #
+    # === status: done
 
     s.copy_jecs()
     s.make_crab_config()
@@ -340,10 +385,9 @@ if __name__=='__main__':
 
     if s.crab_is_done():
         s.make_miniaod_map()
+        s.make_merging_chunks()
 
-    s.make_merging_chunks()
-
-    print s["imerged_to_ijob"]
-    print s["ijob_to_nevents"]
+        print s["imerged_to_ijob"]
+        print s["ijob_to_nevents"]
 
     pprint.pprint( s.sample )
