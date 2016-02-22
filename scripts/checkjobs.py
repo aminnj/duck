@@ -25,3 +25,5 @@ def get_condor_running():
             running_condor_set.add(merged_index)
 
     print running_condor_set
+
+get_condor_running()

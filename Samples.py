@@ -17,7 +17,7 @@ class Sample:
 
     def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, xsec=None):
 
-        self.fake_submission = True
+        self.fake_submission = False
         self.fake_status = False
         self.fake_crab_done = False
         self.fake_legit_sweeproot = True
@@ -39,17 +39,17 @@ class Sample:
                 "isdata": False, # by default, MC
                 "pset": "", # *_cfg.py pset location
                 "status" : "new", # general sample status
-                "datetime" : None, # "160220_151313" from crab request name
                 "crab": { }, # crab task information here
                 "ijob_to_miniaod": { }, # map from ijob to list of miniaod
                 "imerged_to_ijob": { }, # map from imerged to iunmerged
                 "ijob_to_nevents": { }, # map from ijob to (nevents, nevents_eff)
                 }
         self.sample["shortname"] = dataset.split("/")[1]+"_"+dataset.split("/")[2]
-        self.sample["requestname"] = self.sample["shortname"][:99] # damn crab has size limit for name
 
+        self.sample["crab"]["requestname"] = self.sample["shortname"][:99] # damn crab has size limit for name
         self.sample["crab"]["outputdir"] = None
-        self.sample["crab"]["taskdir"] = self.pfx_crab+"crab_"+self.sample["requestname"]
+        self.sample["crab"]["taskdir"] = self.pfx_crab+"crab_"+self.sample["crab"]["requestname"]
+        self.sample["crab"]["datetime"] = None # "160220_151313" from crab request name
 
         self.crab_config = None
         self.crab_status_res = { }
@@ -58,8 +58,10 @@ class Sample:
         self.logfiles = []
 
 
-        self.pfx = self.sample["shortname"][:10]
+        self.pfx = self.sample["shortname"][:17] + "..."
         setConsoleLogLevel(LOGLEVEL_MUTE)
+
+        self.which_pset()
 
     def __getitem__(self, i): return self.sample[i]
 
@@ -70,7 +72,7 @@ class Sample:
         buff += "[%s]   cms3tag, gtag = %s, %s\n" % (self.pfx, self.sample["cms3tag"], self.sample["gtag"])
         buff += "[%s]   xsec, kfactor, eff = %.4f, %.2f, %.2f\n" % (self.pfx, self.sample["xsec"], self.sample["kfact"], self.sample["efact"])
         buff += "[%s]   shortname = %s\n" % (self.pfx, self.sample["shortname"])
-        buff += "[%s]   requestname = %s\n" % (self.pfx, self.sample["requestname"])
+        buff += "[%s]   requestname = %s\n" % (self.pfx, self.sample["crab"]["requestname"])
         buff += "[%s]   pset = %s\n" % (self.pfx, self.sample["pset"])
 
         if self.sample["crab"]:
@@ -82,6 +84,10 @@ class Sample:
                 buff += "[%s]     %s: %i\n" % (self.pfx, cstat, num)
         return buff
 
+    def do_log(self, text):
+        print "[%s] %s" % (self.pfx, text)
+
+
     def which_pset(self):
         if self.sample["dataset"].endswith("SIM"):
             self.sample["pset"] = params.pset_mc
@@ -92,7 +98,7 @@ class Sample:
 
     def make_crab_config(self):
         if self.crab_config is not None: 
-            print "[%s] crab config already made, not remaking" % self.pfx
+            self.do_log("crab config already made, not remaking")
             return
 
         config = Configuration()
@@ -100,7 +106,7 @@ class Sample:
         config.General.workArea = self.pfx_crab # all crab output goes into crab/
         config.General.transferOutputs = True
         config.General.transferLogs = True
-        config.General.requestName = self.sample["requestname"]
+        config.General.requestName = self.sample["crab"]["requestname"]
         config.section_('JobType')
         config.JobType.inputFiles = params.jecs
         config.JobType.pluginName = 'Analysis'
@@ -122,11 +128,11 @@ class Sample:
         pset_out_fname = "%s/%s_cfg.py" % (self.pfx_pset, self.sample["shortname"])
 
         if os.path.isfile(pset_out_fname): 
-            print "[%s] pset already made, not remaking" % self.pfx
+            self.do_log("pset already made, not remaking")
             return
 
         if not os.path.isfile(pset_in_fname):
-            print "[%s] skeleton pset %s does not exist!" % (self.pfx, pset_in_fname)
+            self.do_log("skeleton pset %s does not exist!" % (pset_in_fname))
             return
 
         newlines = []
@@ -155,6 +161,7 @@ class Sample:
 
         with open(pset_out_fname, "w") as fhout:
             fhout.write( "".join(newlines) )
+            self.do_log("made pset %s!" % (pset_out_fname))
 
     def copy_jecs(self):
         for jec in params.jecs:
@@ -165,34 +172,45 @@ class Sample:
         try:
             out = crabCommand('kill', dir=self.sample["crab"]["taskdir"], proxy=u.get_proxy_file())
         except Exception as e:
-            print "[%s] ERROR killing:" % self.pfx, e
+            self.dolog("ERROR killing:",e)
             return 0
         return out["status"] == "SUCCESS"
 
     def crab_delete_dir(self):
-        print "Deleting %s" % self.sample["crab"]["taskdir"]
+        self.do_log("deleting %s" % (self.sample["crab"]["taskdir"]))
+        self.do_log("deleting pset: %s/%s_cfg.py" % (self.pfx_pset, self.sample["shortname"]))
         os.system("rm -rf %s" % self.sample["crab"]["taskdir"])
+        os.system("rm %s/%s_cfg.py" % (self.pfx_pset, self.sample["shortname"]))
 
     def crab_submit(self):
+        # first try to see if the job already exists naively
         if "uniquerequestname" in self.sample["crab"]:
-            print "[%s] already submitted jobs" % self.pfx
+            self.do_log("already submitted jobs")
+            return 1
+
+        # more robust check
+        crablog = "%s/crab.log" % self.sample["crab"]["taskdir"]
+        if os.path.isfile(crablog):
+            taskline = u.get("/bin/grep 'Success' -A 1 -m 1 %s | /bin/grep 'Task name'" % crablog)
+            uniquerequestname = taskline.split("Task name:")[1].strip()
+            self.sample["crab"]["uniquerequestname"] = uniquerequestname
+            self.sample["crab"]["datetime"] = uniquerequestname.split(":")[0].strip()
+            self.do_log("already submitted jobs")
             return 1
 
         try:
             if self.fake_submission:
-                # out = {'uniquerequestname': '160220_081846:namin_crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1', 'requestname': 'crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1'}
                 out = {'uniquerequestname': '160222_012655:namin_crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1', 'requestname': 'crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1'}
             else:
                 out = crabCommand('submit', config = self.crab_config, proxy=u.get_proxy_file())
+
             datetime = out["uniquerequestname"].split(":")[0]
-            self.sample["datetime"] = datetime
-            # FIXME deal with files in .../0001/ and so on
-            self.sample["crab"]["outputdir"] = "/hadoop/cms/store/user/%s/%s/crab_%s/%s/0000/" \
-                    % (self.sample["user"], self.sample["dataset"].split("/")[1], self.sample["requestname"], datetime)
-            print "[%s] submitted jobs. uniquerequestname: %s" % (self.pfx, out["uniquerequestname"])
+            self.sample["crab"]["uniquerequestname"] = out["uniquerequestname"]
+            self.sample["crab"]["datetime"] = datetime
+            self.do_log("submitted jobs. uniquerequestname: %s" % (out["uniquerequestname"]))
             return 1 # succeeded
         except Exception as e:
-            print "[%s] ERROR submitting:" % self.pfx, e
+            self.dolog("ERROR submitting:",e)
             return 0 # failed
 
     def crab_status(self):
@@ -215,7 +233,7 @@ class Sample:
             self.crab_status_res = out
             return 1 # succeeded
         except Exception as e:
-            print "[%s] ERROR getting status:" % self.pfx, e
+            self.dolog("ERROR getting status:",e)
             return 0 # failed
 
     def crab_parse_status(self):
@@ -235,7 +253,7 @@ class Sample:
             self.sample["status"] = "crab"
         except:
             # must be the case that not all this info exists because it was recently submitted
-            print "[%s] can't get status right now (job is probably too new)" % (self.pfx)
+            self.do_log("can't get status right now (is probably too new)")
             return
 
         # population of each status (running, failed, etc.)
@@ -260,16 +278,23 @@ class Sample:
             self.sample["crab"][k] = d_crab[k]
 
     def crab_is_done(self):
+
+        # FIXME deal with files in .../0001/ and so on
+
         if self.fake_crab_done: return True
-        if not self.sample["crab"]["status"] == "COMPLETED": return False
+        if "status" not in self.sample["crab"] or self.sample["crab"]["status"] is not "COMPLETED": return False
+
+        self.sample["crab"]["outputdir"] = "/hadoop/cms/store/user/%s/%s/crab_%s/%s/0000/" \
+                % (self.sample["user"], self.sample["dataset"].split("/")[1], self.sample["crab"]["requestname"], self.sample["crab"]["datetime"])
+
         njobs = self.sample["crab"]["njobs"]
         self.rootfiles = glob.glob(self.sample["crab"]["outputdir"] + "/*.root")
         self.logfiles = glob.glob(self.sample["crab"]["outputdir"] + "/log/*.tar.gz")
         if njobs == len(self.rootfiles) and njobs == len(self.logfiles):
             return True
 
-        print "[%s] ERROR: crab says COMPLETED but not all files are there:" % (self.pfx)
-        print "[%s] # jobs, # root files, # log files = " % (self.pfx, njobs, len(rootfiles), len(logfiles))
+        self.do_log("ERROR: crab says COMPLETED but not all files are there")
+        self.do_log("# jobs, # root files, # log files = " % (njobs, len(rootfiles), len(logfiles)))
         return False
 
     def make_miniaod_map(self):
@@ -383,11 +408,11 @@ if __name__=='__main__':
     if s.crab_status():
         s.crab_parse_status()
 
-    if s.crab_is_done():
-        s.make_miniaod_map()
-        s.make_merging_chunks()
+    # if s.crab_is_done():
+    #     s.make_miniaod_map()
+    #     s.make_merging_chunks()
 
-        print s["imerged_to_ijob"]
-        print s["ijob_to_nevents"]
+    #     print s["imerged_to_ijob"]
+    #     print s["ijob_to_nevents"]
 
     pprint.pprint( s.sample )

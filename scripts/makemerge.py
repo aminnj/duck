@@ -6,8 +6,8 @@ import os
 taskdir="../crab/crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1"
 base="/home/users/namin/sandbox/duck/scripts/"
 shortname="ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1"
-unmergedDir="/hadoop/cms/store/user/namin/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/160220_235603/0000"
-xsec=0.0123
+unmergedDir="/hadoop/cms/store/user/namin/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/160222_012655/0000"
+xsec=0.0234
 kfactor=1.10
 filtEff=1.0
 
@@ -23,10 +23,10 @@ inputFiles = ",".join([executableScript, mergeScript, addBranchesScript])
 
 
 # this is the only stuff that is different between different merged files
-inputIndices=",".join(map(str,[2,8]))
+inputIndices=",".join(map(str,[2,6]))
 mergedIndex=1
-nevents=25000
-nevents_effective=21000
+nevents=33200
+nevents_effective=30200
 inputArguments=" ".join(map(str,[unmergedDir, inputIndices, mergedIndex, nevents, nevents_effective, xsec, kfactor, filtEff]))
 
 condorParams = {
@@ -64,6 +64,7 @@ with open(submitFile, "w") as fhout:
 
 # status, submitOutput = commands.getstatusoutput("condor_submit %s" % submitFile)
 # print submitOutput
+
 submitOutput = """
 Submitting job(s).
 1 job(s) submitted to cluster 312905.

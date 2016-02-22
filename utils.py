@@ -37,6 +37,7 @@ def dataset_event_count(dataset):
     # 3 hours of work to figure out how the crab dbs api works and get this to work with only `cmsenv`....
     # can't use urllib2 since x509 got supported after 2.7.6
     # can't use requests because that doesn't come with cmsenv
+    # btw. api is at https://cmsweb.cern.ch/dbs/prod/global/DBSReader/
     b = StringIO.StringIO() 
     c = pycurl.Curl() 
     url = "https://cmsweb.cern.ch/dbs/prod/global/DBSReader/filesummaries?dataset=%s&validFileOnly=1" % dataset
