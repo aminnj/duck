@@ -1,6 +1,9 @@
 import os
 import sys
 import commands
+import pycurl 
+import StringIO 
+import ast
 
 def get(cmd, returnStatus=False):
     status, out = commands.getstatusoutput(cmd)
@@ -31,20 +34,22 @@ def get_proxy_file():
     return cert_file
 
 def dataset_event_count(dataset):
-    from dbs.apis.dbsClient import DbsApi
-    url="https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
-    api=DbsApi(url=url)
-    output = api.listDatasets(dataset=dataset)
-
-    if(len(output)==1):
-        inp = output[0]['dataset']
-        info = api.listFileSummaries(dataset=inp)[0]
-        filesize = info['file_size']/1e9 # GB
-        nevents = info['num_event']
-        nlumis = info['num_lumi']
-        files = api.listFiles(dataset=dataset, detail=1, validFileOnly=1)
-        bad_nevents = sum(file["event_count"] for file in files if not file["is_file_valid"])
-        return {"nevents": nevents, "filesize": filesize, "nfiles": len(files), "nlumis": nlumis, "bad_nevents": bad_nevents}
+    # 3 hours of work to figure out how the crab dbs api works and get this to work with only `cmsenv`....
+    # can't use urllib2 since x509 got supported after 2.7.6
+    # can't use requests because that doesn't come with cmsenv
+    b = StringIO.StringIO() 
+    c = pycurl.Curl() 
+    url = "https://cmsweb.cern.ch/dbs/prod/global/DBSReader/filesummaries?dataset=%s&validFileOnly=1" % dataset
+    cert = '/tmp/x509up_u%s' % str(os.getuid())
+    c.setopt(pycurl.URL, url) 
+    c.setopt(pycurl.WRITEFUNCTION, b.write) 
+    c.setopt(pycurl.CAPATH, '/etc/grid-security/certificates') 
+    c.unsetopt(pycurl.CAINFO)
+    c.setopt(pycurl.SSLCERT, cert)
+    c.perform() 
+    ret = ast.literal_eval(b.getvalue())
+    if len(ret) > 0:
+        return { "nevents": ret[0]['num_event'], "filesize": ret[0]['file_size'], "nfiles": ret[0]['num_file'], "nlumis": ret[0]['num_lumi'] }
 
     return None
 
