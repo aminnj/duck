@@ -10,6 +10,7 @@ try:
     from ROOT import TFile, TH1F
 except:
     print ">>> Make sure to source setup.sh first!"
+    sys.exit()
 
 import params
 import utils as u
@@ -26,6 +27,7 @@ class Sample:
         self.fake_miniaod_map = True
         self.fake_merge_lists = True
         self.fake_check = True
+        self.fake_copy = True
         self.specialdir_test = True
 
         # dirs are wrt the base directory where this script is located
@@ -95,6 +97,13 @@ class Sample:
                 if num == 0: continue
                 buff += "[%s]     %s: %i\n" % (self.pfx, cstat, num)
         return buff
+
+    def get_slimmed_dict(self):
+        new_dict = self.sample.copy()
+        del new_dict["imerged_to_ijob"]
+        del new_dict["ijob_to_miniaod"]
+        del new_dict["ijob_to_nevents"]
+        return new_dict
 
     def do_log(self, text):
         print "[%s] %s" % (self.pfx, text)
@@ -235,7 +244,7 @@ class Sample:
 
         try:
             if self.fake_submission:
-                out = {'uniquerequestname': '160222_012655:namin_crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1', 'requestname': 'crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1'}
+                out = {'uniquerequestname': '160222_073351:namin_crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1', 'requestname': 'crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1'}
             else:
                 out = crabCommand('submit', config = self.crab_config, proxy=u.get_proxy_file())
 
@@ -243,6 +252,7 @@ class Sample:
             self.sample["crab"]["uniquerequestname"] = out["uniquerequestname"]
             self.sample["crab"]["datetime"] = datetime
             self.do_log("submitted jobs. uniquerequestname: %s" % (out["uniquerequestname"]))
+            self.sample["status"] = "crab"
             return 1 # succeeded
         except Exception as e:
             self.dolog("ERROR submitting:",e)
@@ -287,7 +297,6 @@ class Sample:
                     "transferring": 0, "transferred": 0, "cooloff": 0, "finished": 0,
                 }
             }
-            self.sample["status"] = "crab"
         except:
             # must be the case that not all this info exists because it was recently submitted
             self.do_log("can't get status right now (is probably too new)")
@@ -415,7 +424,6 @@ class Sample:
             self.sample['imerged_to_ijob'] = {1: [1, 2, 3, 4], 2: [5, 6, 7, 8]}
             return
 
-        self.sample["status"] = "mergelists"
         if not self.sample["imerged_to_ijob"]: 
             self.do_log("making map from merged index to unmerged indicies")
             group, groups = [], []
@@ -437,6 +445,7 @@ class Sample:
 
 
     def get_condor_running(self):
+        # return set of merged indices
         output = u.get("condor_q $USER -autoformat CMD ARGS")
         # output = """
         # /home/users/namin/sandbox/duck/scripts/mergeWrapper.sh /hadoop/cms/store/user/namin/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/160220_235603/0000 2,8 1 25000 21000 0.0123 1.1 1.0
@@ -452,13 +461,13 @@ class Sample:
             if self.sample["crab"]["requestname"] == requestname:
                 running_condor_set.add(int(merged_index))
 
-        # return set of merged indices
         return running_condor_set
 
 
     def get_merged_done(self):
-        files = os.listdir(self.sample["crab"]["outputdir"]+"/merged/")
         # return set of merged indices
+        files = os.listdir(self.sample["crab"]["outputdir"]+"/merged/")
+        files = [f for f in files if f.endswith(".root")]
         return set(map(lambda x: int(x.split("_")[-1].split(".")[0]), files))
 
 
@@ -518,13 +527,13 @@ class Sample:
         done_set = self.get_merged_done()
         imerged_list = list( imerged_set - processing_set - done_set ) 
 
-        self.sample["status"] = "postprocessing"
         self.sample["postprocessing"]["total"] = len(imerged_set)
         self.sample["postprocessing"]["running"] = len(processing_set)
         self.sample["postprocessing"]["done"] = len(done_set)
         self.sample["postprocessing"]["tosubmit"] = len(imerged_list)
 
         if len(imerged_list) > 0:
+            self.sample["status"] = "postprocessing"
             self.do_log("submitting %i merge jobs" % len(imerged_list))
 
         for imerged in imerged_list:
@@ -544,37 +553,66 @@ class Sample:
 
     
     def make_metadata(self):
-        # TODO
-        # make metadata and copy it to self.sample["crab"]["outputdir"]+"/merged/"
-        pass
+        metadata_file = self.sample["crab"]["taskdir"]+"/metadata.txt"
+        with open(metadata_file, "w") as fhout:
+            print >>fhout,"sampleName: %s" % self.sample["dataset"]
+            print >>fhout,"xsec: %s" % self.sample["xsec"]
+            print >>fhout,"k-fact: %s" % self.sample["kfact"]
+            print >>fhout,"e-fact: %s" % self.sample["efact"]
+            print >>fhout,"cms3tag: %s" % self.sample["cms3tag"]
+            print >>fhout,"gtag: %s" % self.sample["gtag"]
+            print >>fhout,"sparms: %s" % (",".join(self.sample["sparms"]) if self.sample["sparms"] else "_")
+            print >>fhout, ""
+            print >>fhout,"unmerged files are in: %s" % self.sample["crab"]["outputdir"]
+            print >>fhout, ""
+            for ijob in sorted(self.sample["ijob_to_miniaod"]):
+                print >>fhout, "unmerged %i %s" % (ijob, self.sample["ijob_to_miniaod"][ijob][0])
+            print >>fhout, ""
+            for imerged in sorted(self.sample["imerged_to_ijob"]):
+                print >>fhout, "merged file constituents %i: %s" % (imerged, " ".join(map(str,self.sample["imerged_to_ijob"][imerged])))
+            print >>fhout, ""
+            for imerged in sorted(self.sample["imerged_to_ijob"]):
+                nevents_both = [self.sample["ijob_to_nevents"][ijob] for ijob in self.sample["imerged_to_ijob"][imerged]]
+                nevents = sum([x[0] for x in nevents_both])
+                nevents_effective = sum([x[1] for x in nevents_both])
+                print >>fhout, "merged file nevents %i: %i %i" % (imerged, nevents, nevents_effective)
+        u.cmd("cp %s %s/" % (metadata_file, self.sample["crab"]["outputdir"]+"/merged/"))
+        self.do_log("made metadata and copied it to merged area")
 
     def copy_files(self):
-        # TODO
-        # move merged files to final resting place
-        print "Will do:"
-        print "mv %s/merged/* to %s/" % (self.sample["crab"]["outputdir"], self.sample["finaldir"])
-        pass
+        self.do_log("started copying files to %s" % self.sample["finaldir"])
+        if self.fake_copy:
+            print "Will do: mv %s/merged/* to %s/" % (self.sample["crab"]["outputdir"], self.sample["finaldir"])
+        else:
+            u.cmd( "mv %s/merged/* to %s/" % (self.sample["crab"]["outputdir"], self.sample["finaldir"]) )
+        self.do_log("finished copying files")
+
+        self.sample["status"] = "done"
+
 
     def check_output(self):
-        if self.fake_check: return True
-        output_dir = self.sample["crab"]["outputdir"]
-        cmd = """( cd scripts; root -n -b -q -l "checkCMS3.C(\\"{0}/merged\\", \\"{0}\\", 0,0)"; )""".format(output_dir)
-        self.do_log("started running checkCMS3")
-        out = u.get(cmd)
-        self.do_log("finished running checkCMS3")
+        if self.fake_check:
+            problems = []
+            tot_problems = 0
+        else:
+            output_dir = self.sample["crab"]["outputdir"]
+            cmd = """( cd scripts; root -n -b -q -l "checkCMS3.C(\\"{0}/merged\\", \\"{0}\\", 0,0)"; )""".format(output_dir)
+            self.do_log("started running checkCMS3")
+            out = u.get(cmd)
+            self.do_log("finished running checkCMS3")
 
-        # out = """
-        # ERROR!                Inconsistent scale1fb!
-        # =============== RESULTS =========================
-        # Total problems found: 1
-        # """
+            # out = """
+            # ERROR!                Inconsistent scale1fb!
+            # =============== RESULTS =========================
+            # Total problems found: 1
+            # """
 
-        lines = out.split("\n")
-        problems = []
-        tot_problems = -1
-        for line in lines:
-            if "ERROR!" in line: problems.append(line.replace("ERROR!","").strip())
-            elif "Total problems found:" in line: tot_problems = int(line.split(":")[1].strip())
+            lines = out.split("\n")
+            problems = []
+            tot_problems = -1
+            for line in lines:
+                if "ERROR!" in line: problems.append(line.replace("ERROR!","").strip())
+                elif "Total problems found:" in line: tot_problems = int(line.split(":")[1].strip())
 
         self.sample["checks"]["nproblems"] = tot_problems
         self.sample["checks"]["problems"] = problems
@@ -582,13 +620,6 @@ class Sample:
 
 if __name__=='__main__':
 
-    s = Sample( **{
-              "dataset": "/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/MINIAODSIM",
-              "gtag": "74X_mcRun2_asymptotic_v2",
-              "kfact": 1.0,
-              "efact": 1.0,
-              "xsec": 0.0234,
-              } )
 
     # flowchart:
     # === status: created
@@ -599,25 +630,29 @@ if __name__=='__main__':
     # 2) submit crab jobs and get status
     # 3) keep getting status until is_crab_done
     #
-    # ===> status: mergelists
-    # 4) make miniaod map, make merging chunks
-    #
     # === status: postprocessing
+    # 4) make miniaod map, make merging chunks
     # 5) submit merging jobs
     # 6) check merge output and re-submit outstanding jobs until all done
     # 7) checkCMS3
     # 8) make meta data
-    #
-    # === status: copying
     # 9) copy to final resting place
     #
     # === status: done
 
-    # if u.proxy_hours_left() < 5:
-    #     print "Proxy near end of lifetime, renewing."
-    #     u.proxy_renew()
-    # else:
-    #     print "Proxy looks good"
+    s = Sample( **{
+              "dataset": "/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/MINIAODSIM",
+              "gtag": "74X_mcRun2_asymptotic_v2", # isn't this the same as what's here ---^^^^^^^^^^^^^^^^^^^^^^^^?
+              "kfact": 1.0,
+              "efact": 1.0,
+              "xsec": 0.0234,
+              } )
+
+    if u.proxy_hours_left() < 5:
+        print "Proxy near end of lifetime, renewing."
+        u.proxy_renew()
+    else:
+        print "Proxy looks good"
 
     s.copy_jecs()
     s.make_crab_config()
@@ -634,7 +669,11 @@ if __name__=='__main__':
         s.submit_merge_jobs()
 
     if s.is_merging_done():
+        s.make_metadata()
         if s.check_output():
             s.copy_files()
+
+
+    pprint.pprint(s.get_slimmed_dict())
 
     # pprint.pprint( s.sample )
