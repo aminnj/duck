@@ -17,17 +17,20 @@ class Sample:
 
     def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, xsec=None):
 
+        # debug bools
         self.fake_submission = False
-        self.fake_status = False
-        self.fake_crab_done = False
-        self.fake_legit_sweeproot = True
+        self.fake_status = True
+        self.fake_crab_done = True
+        self.fake_legit_sweeproot = False
         self.fake_miniaod_map = True
-
-        self.pfx_pset = './pset/'
-        self.pfx_crab = './crab/'
+        self.fake_merge_lists = True
+        self.specialdir_test = True
 
         # dirs are wrt the base directory where this script is located
+        self.pfx_pset = 'pset' # where to hold the psets
+        self.pfx_crab = 'crab' # where to keep all crab tasks
         self.sample = {
+                "basedir" : os.getcwd()+"/",
                 "dataset" : dataset,
                 "user" : os.getenv("USER"),
                 "cms3tag" : params.cms3tag,
@@ -38,17 +41,21 @@ class Sample:
                 "sparms": [], # always keep as list. e.g., ["mlsp","mstop"]
                 "isdata": False, # by default, MC
                 "pset": "", # *_cfg.py pset location
+                "specialdir": "", # /hadoop/cms/store/group/snt/{specialdir}/ (e.g., run2_25ns, run2_fastsim)
+                "finaldir": "", # where final files will live
                 "status" : "new", # general sample status
                 "crab": { }, # crab task information here
+                "postprocessing": { }, # postprocessing counts for monitor
                 "ijob_to_miniaod": { }, # map from ijob to list of miniaod
                 "imerged_to_ijob": { }, # map from imerged to iunmerged
                 "ijob_to_nevents": { }, # map from ijob to (nevents, nevents_eff)
                 }
         self.sample["shortname"] = dataset.split("/")[1]+"_"+dataset.split("/")[2]
+        self.sample["shortname"] = dataset.split("/")[1]+"_"+dataset.split("/")[2]
 
         self.sample["crab"]["requestname"] = self.sample["shortname"][:99] # damn crab has size limit for name
         self.sample["crab"]["outputdir"] = None
-        self.sample["crab"]["taskdir"] = self.pfx_crab+"crab_"+self.sample["crab"]["requestname"]
+        self.sample["crab"]["taskdir"] = self.pfx_crab+"/crab_"+self.sample["crab"]["requestname"]
         self.sample["crab"]["datetime"] = None # "160220_151313" from crab request name
 
         self.crab_config = None
@@ -57,11 +64,12 @@ class Sample:
         self.rootfiles = []
         self.logfiles = []
 
+        self.handled_more_than_1k = False
 
         self.pfx = self.sample["shortname"][:17] + "..."
         setConsoleLogLevel(LOGLEVEL_MUTE)
 
-        self.which_pset()
+        self.set_sample_specifics()
 
     def __getitem__(self, i): return self.sample[i]
 
@@ -88,13 +96,31 @@ class Sample:
         print "[%s] %s" % (self.pfx, text)
 
 
-    def which_pset(self):
-        if self.sample["dataset"].endswith("SIM"):
-            self.sample["pset"] = params.pset_mc
-        if self.sample["dataset"].startswith("/SMS") or len(self.sample["sparms"]) > 0:
-            self.sample["pset"] = params.pset_mc_fastsim
-        if self.sample["isdata"]:
-            self.sample["pset"] = params.pset_data
+    def set_sample_specifics(self):
+        ds = self.sample["dataset"]
+
+        # figure out pset automatically
+        if ds.endswith("SIM"): self.sample["pset"] = params.pset_mc
+        if ds.startswith("/SMS"): self.sample["pset"] = params.pset_mc_fastsim
+        if len(self.sample["sparms"]) > 0: self.sample["pset"] = params.pset_mc_fastsim
+        if "FSPremix" in ds: self.sample["pset"] = params.pset_mc_fastsim
+        if "FastAsympt" in ds: self.sample["pset"] = params.pset_mc_fastsim
+        if self.sample["isdata"]: self.sample["pset"] = params.pset_data
+
+        # figure out specialdir automatically
+        if self.specialdir_test:
+            self.sample["specialdir"] = "test"
+        else:
+
+            if "50ns" in ds: self.sample["specialdir"] = "run2_50ns"
+            elif "RunIISpring15MiniAODv2" in ds: self.sample["specialdir"] = "run2_fastsim"
+            elif "RunIISpring15FSPremix" in ds: self.sample["specialdir"] = "run2_fastsim"
+            elif "RunIISpring15MiniAODv2" in ds: self.sample["specialdir"] = "run2_25ns_MiniAODv2"
+            elif "25ns" in ds: self.sample["specialdir"] = "run2_25ns"
+
+
+        self.sample["finaldir"] = "/hadoop/cms/store/group/snt/%s/%s/%s/" \
+                % (self.sample["specialdir"], self.sample["shortname"], self.sample["cms3tag"].split("_")[-1])
 
     def make_crab_config(self):
         if self.crab_config is not None: 
@@ -120,6 +146,7 @@ class Sample:
         config.section_('Site')
         config.Site.storageSite = 'T2_US_UCSD'
         self.crab_config = config
+
     
     def make_pset(self):
         if not os.path.isdir(self.pfx_pset): os.makedirs(self.pfx_pset)
@@ -163,10 +190,12 @@ class Sample:
             fhout.write( "".join(newlines) )
             self.do_log("made pset %s!" % (pset_out_fname))
 
+
     def copy_jecs(self):
         for jec in params.jecs:
             if not os.path.isfile(jec):
                 os.system("cp /nfs-7/userdata/JECs/%s ." % jec)
+
 
     def crab_kill(self):
         try:
@@ -176,16 +205,18 @@ class Sample:
             return 0
         return out["status"] == "SUCCESS"
 
+
     def crab_delete_dir(self):
         self.do_log("deleting %s" % (self.sample["crab"]["taskdir"]))
         self.do_log("deleting pset: %s/%s_cfg.py" % (self.pfx_pset, self.sample["shortname"]))
         os.system("rm -rf %s" % self.sample["crab"]["taskdir"])
         os.system("rm %s/%s_cfg.py" % (self.pfx_pset, self.sample["shortname"]))
 
+
     def crab_submit(self):
         # first try to see if the job already exists naively
         if "uniquerequestname" in self.sample["crab"]:
-            self.do_log("already submitted jobs")
+            self.do_log("already submitted crab jobs")
             return 1
 
         # more robust check
@@ -195,7 +226,7 @@ class Sample:
             uniquerequestname = taskline.split("Task name:")[1].strip()
             self.sample["crab"]["uniquerequestname"] = uniquerequestname
             self.sample["crab"]["datetime"] = uniquerequestname.split(":")[0].strip()
-            self.do_log("already submitted jobs")
+            self.do_log("already submitted crab jobs")
             return 1
 
         try:
@@ -212,6 +243,7 @@ class Sample:
         except Exception as e:
             self.dolog("ERROR submitting:",e)
             return 0 # failed
+
 
     def crab_status(self):
         try:
@@ -235,6 +267,7 @@ class Sample:
         except Exception as e:
             self.dolog("ERROR getting status:",e)
             return 0 # failed
+
 
     def crab_parse_status(self):
         stat = self.crab_status_res
@@ -277,15 +310,33 @@ class Sample:
         for k in d_crab:
             self.sample["crab"][k] = d_crab[k]
 
-    def crab_is_done(self):
 
-        # FIXME deal with files in .../0001/ and so on
+    def handle_more_than_1k(self):
+        if self.handled_more_than_1k: return
 
-        if self.fake_crab_done: return True
-        if "status" not in self.sample["crab"] or self.sample["crab"]["status"] is not "COMPLETED": return False
+        output_dir = self.sample["crab"]["outputdir"]
+        without_zeros = self.sample["crab"]["outputdir"].replace("0000","")
+
+        for kilobatch in os.listdir(without_zeros):
+            if kilobatch == "0000": continue
+            u.cmd("mv {0}/{1}/*.root {0}/{2}/".format(without_zeros, kilobatch, "0000"))
+            u.cmd("mv {0}/{1}/log/* {0}/{2}/log/".format(without_zeros, kilobatch, "0000"))
+
+        self.do_log("copied files from .../*/ to .../0000/")
+        self.handled_more_than_1k = True
+
+
+    def is_crab_done(self):
 
         self.sample["crab"]["outputdir"] = "/hadoop/cms/store/user/%s/%s/crab_%s/%s/0000/" \
                 % (self.sample["user"], self.sample["dataset"].split("/")[1], self.sample["crab"]["requestname"], self.sample["crab"]["datetime"])
+
+
+        if self.fake_crab_done: return True
+        if "status" not in self.sample["crab"] or self.sample["crab"]["status"] != "COMPLETED": return False
+
+        self.handle_more_than_1k()
+
 
         njobs = self.sample["crab"]["njobs"]
         self.rootfiles = glob.glob(self.sample["crab"]["outputdir"] + "/*.root")
@@ -297,31 +348,35 @@ class Sample:
         self.do_log("# jobs, # root files, # log files = " % (njobs, len(rootfiles), len(logfiles)))
         return False
 
+
     def make_miniaod_map(self):
+        if self.fake_miniaod_map:
+            self.sample["ijob_to_miniaod"] = {
+                1: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/065D3D09-CA6D-E511-A59C-D4AE526A0461.root'],
+                2: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/20FF3B81-C96D-E511-AAB8-441EA17344AC.root'],
+                3: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/2EF6C807-CA6D-E511-A9EE-842B2B758AD8.root'],
+                4: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/30FDAF08-CA6D-E511-828C-D4AE526A0C7A.root'],
+                5: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/4A1B071A-CA6D-E511-8D8E-441EA1733FD6.root'],
+                6: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/90D98A05-CA6D-E511-B721-00266CFFBDB4.root'],
+                7: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/A8935398-C96D-E511-86FA-1CC1DE18CFF0.root'],
+                8: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/E80D9307-CA6D-E511-A3A7-003048FFCB96.root'],
+            }
+            return
+
         if not self.sample["ijob_to_miniaod"]:
-            if self.fake_miniaod_map:
-                self.sample["ijob_to_miniaod"] = {
-                    1: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/065D3D09-CA6D-E511-A59C-D4AE526A0461.root'],
-                    2: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/20FF3B81-C96D-E511-AAB8-441EA17344AC.root'],
-                    3: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/2EF6C807-CA6D-E511-A9EE-842B2B758AD8.root'],
-                    4: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/30FDAF08-CA6D-E511-828C-D4AE526A0C7A.root'],
-                    5: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/4A1B071A-CA6D-E511-8D8E-441EA1733FD6.root'],
-                    6: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/90D98A05-CA6D-E511-B721-00266CFFBDB4.root'],
-                    7: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/A8935398-C96D-E511-86FA-1CC1DE18CFF0.root'],
-                    8: ['/store/mc/RunIISpring15MiniAODv2/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/MINIAODSIM/74X_mcRun2_asymptotic_v2-v1/60000/E80D9307-CA6D-E511-A3A7-003048FFCB96.root']
-                }
-            else:
-                for logfile in self.logfiles:
-                    with  tarfile.open(logfile, "r:gz") as tar:
-                        for member in tar:
-                            if "FrameworkJobReport" not in member.name: continue
-                            jobnum = int(member.name.split("-")[1].split(".xml")[0])
-                            fh = tar.extractfile(member)
-                            lines = [line for line in fh.readlines() if "<PFN>" in line and "/store/" in line]
-                            miniaod = list(set(map(lambda x: "/store/"+x.split("</PFN>")[0].split("/store/")[1], lines)))
-                            self.sample["ijob_to_miniaod"][jobnum] = miniaod
-                            fh.close()
-                            break
+            self.do_log("making map from unmerged number to miniaod name")
+            for logfile in self.logfiles:
+                with  tarfile.open(logfile, "r:gz") as tar:
+                    for member in tar:
+                        if "FrameworkJobReport" not in member.name: continue
+                        jobnum = int(member.name.split("-")[1].split(".xml")[0])
+                        fh = tar.extractfile(member)
+                        lines = [line for line in fh.readlines() if "<PFN>" in line and "/store/" in line]
+                        miniaod = list(set(map(lambda x: "/store/"+x.split("</PFN>")[0].split("/store/")[1], lines)))
+                        self.sample["ijob_to_miniaod"][jobnum] = miniaod
+                        fh.close()
+                        break
+
 
     def get_rootfile_info(self, fname):
         if self.fake_legit_sweeproot: return (False, 1000, 900, 2.0)
@@ -346,9 +401,19 @@ class Sample:
 
         return (False, n_entries, n_entries_eff, f.GetSize()/1.0e9)
 
+
     def make_merging_chunks(self):
+        if self.fake_merge_lists:
+            self.sample['ijob_to_nevents'] = { 1: [43079L, 36953L], 2: [14400L, 12304L],
+                                              3: [43400L, 37116L], 4: [29642L, 25430L],
+                                              5: [48479L, 41261L], 6: [18800L, 16156L],
+                                              7: [42000L, 35928L], 8: [10200L, 8702L] }
+            self.sample['imerged_to_ijob'] = {1: [1, 2, 3, 4], 2: [5, 6, 7, 8]}
+            return
+
         self.sample["status"] = "mergelists"
         if not self.sample["imerged_to_ijob"]: 
+            self.do_log("making map from merged index to unmerged indicies")
             group, groups = [], []
             tot_size = 0.0
             for rfile in self.rootfiles:
@@ -367,6 +432,112 @@ class Sample:
                 self.sample["imerged_to_ijob"][igp+1] = gp
 
 
+    def get_condor_running(self):
+        output = u.get("condor_q $USER -autoformat CMD ARGS")
+        # output = """
+        # /home/users/namin/sandbox/duck/scripts/mergeWrapper.sh /hadoop/cms/store/user/namin/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/160220_235603/0000 2,8 1 25000 21000 0.0123 1.1 1.0
+        # /home/users/namin/sandbox/duck/scripts/mergeWrapper.sh /hadoop/cms/store/user/namin/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/160220_235603/0000 2,8 2 25000 21000 0.0123 1.1 1.0
+        # /home/users/namin/sandbox/duck/scripts/mergeWrapper.sh /hadoop/cms/store/user/namin/TT_TuneCUETP8M1_13TeV-amcatnlo-pythia8/crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/160220_235603/0000 2,8 4 25000 21000 0.0123 1.1 1.0
+        # """
+        running_condor_set = set()
+        for line in output.split("\n"):
+            if "mergeWrapper" not in line: continue
+            _, unmerged_dir, _, merged_index = line.split(" ")[:4]
+            requestname = unmerged_dir.split("crab_")[1].split("/")[0]
+
+            if self.sample["crab"]["requestname"] == requestname:
+                running_condor_set.add(int(merged_index))
+
+        # return set of merged indices
+        return running_condor_set
+
+
+    def get_merged_done(self):
+        files = os.listdir(self.sample["crab"]["outputdir"]+"/merged/")
+        # return set of merged indices
+        return set(map(lambda x: int(x.split("_")[-1].split(".")[0]), files))
+
+
+    def is_merging_done(self):
+        # want 0 running condor jobs and all merged files in output area
+        return len(self.get_condor_running()) == 0 and len(self.get_merged_done()) == len(self.sample["imerged_to_ijob"].keys())
+
+
+    def submit_merge_jobs(self):
+        working_dir = self.sample["basedir"]
+        shortname = self.sample["shortname"]
+        unmerged_dir = self.sample["crab"]["outputdir"]
+        xsec = self.sample["xsec"]
+        kfactor = self.sample["kfact"]
+        efactor = self.sample["efact"]
+
+        submit_file = self.sample["crab"]["taskdir"]+"/submit.cmd"
+        executable_script = working_dir+"/scripts/mergeWrapper.sh"
+        merge_script = working_dir+"/scripts/mergeScript.C"
+        addbranches_script = working_dir+"/scripts/addBranches.C"
+        proxy_file = u.get("find /tmp/x509up_u* -user $USER").strip()
+        condor_log_files = "/data/tmp/%s/%s/%s.log" % (self.sample["user"],shortname,datetime.datetime.now().strftime("+%Y.%m.%d-%H.%M.%S"))
+        std_log_files = "/data/tmp/%s/%s/std_logs/" % (self.sample["user"],shortname)
+        input_files = ",".join([executable_script, merge_script, addbranches_script])
+
+        condor_params = {
+                "exe": executable_script,
+                "inpfiles": input_files,
+                "condorlog": condor_log_files,
+                "stdlog": std_log_files,
+                "proxy": proxy_file,
+                }
+
+        cfg_format = "universe=grid \n" \
+                     "grid_resource = condor cmssubmit-r1.t2.ucsd.edu glidein-collector.t2.ucsd.edu \n" \
+                     "+remote_DESIRED_Sites=\"T2_US_UCSD\" \n" \
+                     "executable={exe} \n" \
+                     "arguments={args} \n" \
+                     "transfer_executable=True \n" \
+                     "when_to_transfer_output = ON_EXIT \n" \
+                     "transfer_input_files={inpfiles} \n" \
+                     "+Owner = undefined  \n" \
+                     "log={condorlog} \n" \
+                     "output={stdlog}/1e.$(Cluster).$(Process).out \n" \
+                     "error={stdlog}/1e.$(Cluster).$(Process).err \n" \
+                     "notification=Never \n" \
+                     "x509userproxy={proxy} \n" \
+                     "should_transfer_files = yes \n" \
+                     "queue \n" 
+
+        # don't resubmit the ones that are already running or done
+        imerged_set = set(self.sample['imerged_to_ijob'].keys())
+        processing_set = self.get_condor_running()
+        done_set = self.get_merged_done()
+        imerged_list = list( imerged_set - processing_set - done_set ) 
+
+        self.sample["status"] = "postprocessing"
+        self.sample["postprocessing"]["total"] = len(imerged_set)
+        self.sample["postprocessing"]["running"] = len(processing_set)
+        self.sample["postprocessing"]["done"] = len(done_set)
+        self.sample["postprocessing"]["tosubmit"] = len(imerged_list)
+
+        if len(imerged_list) > 0:
+            self.do_log("submitting %i merge jobs" % len(imerged_list))
+
+        for imerged in imerged_list:
+            input_indices=",".join(map(str,self.sample['imerged_to_ijob'][imerged]))
+            nevents_both = [self.sample['ijob_to_nevents'][i] for i in self.sample['imerged_to_ijob'][imerged]]
+            nevents = sum([x[0] for x in nevents_both])
+            nevents_effective = sum([x[1] for x in nevents_both])
+
+            input_arguments = " ".join(map(str,[unmerged_dir, input_indices, imerged, nevents, nevents_effective, xsec, kfactor, efactor]))
+            condor_params["args"] = input_arguments
+
+            cfg = cfg_format.format(**condor_params)
+            with open(submit_file, "w") as fhout:
+                fhout.write(cfg)
+
+            submit_output = u.get("condor_submit %s" % submit_file)
+
+            if " submitted " in submit_output: 
+                self.do_log("job for merged_ntuple_%i.root submitted successfully" % imerged)
+
 if __name__=='__main__':
 
     s = Sample( **{
@@ -384,7 +555,7 @@ if __name__=='__main__':
     #
     # === status: crab
     # 2) submit crab jobs and get status
-    # 3) keep getting status until crab_is_done
+    # 3) keep getting status until is_crab_done
     #
     # ===> status: mergelists
     # 4) make miniaod map, make merging chunks
@@ -400,6 +571,12 @@ if __name__=='__main__':
     #
     # === status: done
 
+    # if u.proxy_hours_left() < 5:
+    #     print "Proxy near end of lifetime, renewing."
+    #     u.proxy_renew()
+    # else:
+    #     print "Proxy looks good"
+
     s.copy_jecs()
     s.make_crab_config()
     s.make_pset()
@@ -408,11 +585,13 @@ if __name__=='__main__':
     if s.crab_status():
         s.crab_parse_status()
 
-    # if s.crab_is_done():
-    #     s.make_miniaod_map()
-    #     s.make_merging_chunks()
+    if s.is_crab_done():
+        pass
 
-    #     print s["imerged_to_ijob"]
-    #     print s["ijob_to_nevents"]
+        # s.make_miniaod_map()
+        # s.make_merging_chunks()
+        # s.submit_merge_jobs()
+
+    # print s.is_merging_done()
 
     pprint.pprint( s.sample )

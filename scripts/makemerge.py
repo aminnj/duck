@@ -9,7 +9,7 @@ shortname="ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mc
 unmergedDir="/hadoop/cms/store/user/namin/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/160222_012655/0000"
 xsec=0.0234
 kfactor=1.10
-filtEff=1.0
+efactor=1.0
 
 submitFile = taskdir+"/submit.cmd"
 workingDirectory = base
@@ -27,7 +27,7 @@ inputIndices=",".join(map(str,[2,6]))
 mergedIndex=1
 nevents=33200
 nevents_effective=30200
-inputArguments=" ".join(map(str,[unmergedDir, inputIndices, mergedIndex, nevents, nevents_effective, xsec, kfactor, filtEff]))
+inputArguments=" ".join(map(str,[unmergedDir, inputIndices, mergedIndex, nevents, nevents_effective, xsec, kfactor, efactor]))
 
 condorParams = {
         "exe": executableScript,
