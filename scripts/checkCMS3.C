@@ -132,7 +132,7 @@ int checkCMS3( TString samplePath = "", TString unmerged_path = "", bool useFilt
 		cout << samplePath << endl;
 	  }
 	  else {
-		printColor("CMS3 tags don't match!", 91, humanUser);
+		printColor("ERROR! CMS3 tags don't match!", 91, humanUser);
 		cout << "This ntuple was made using " << tagStored << ", but it's stored in a directory named " << tagDir << "." << endl;
 		nProblems++;
 	  }
@@ -165,7 +165,7 @@ int checkCMS3( TString samplePath = "", TString unmerged_path = "", bool useFilt
   int loop_count = 0;
   Long64_t nEvts_das = -9999;
 
-  while( loop_count<3 && das_failed ) {
+  while( loop_count<5 && das_failed ) {
       std::cout << "python das_client.py --query=\"dataset= "+dataset_name+" | grep dataset.nevents\" " << std::endl;
     TString Evts_das = gSystem->GetFromPipe( "python das_client.py --query=\"dataset= "+dataset_name+" | grep dataset.nevents\" | tail -1" );
     nEvts_das = Evts_das.Atoll();
@@ -174,7 +174,7 @@ int checkCMS3( TString samplePath = "", TString unmerged_path = "", bool useFilt
   }
 
   if( das_failed ) {
-    printColor("DAS query failed!", 91, humanUser);
+    printColor("ERROR! DAS query failed!", 91, humanUser);
     nProblems++;
   }
   else cout << nEvts_das << endl;
@@ -198,13 +198,13 @@ int checkCMS3( TString samplePath = "", TString unmerged_path = "", bool useFilt
       TChain* chain_unmerged = new TChain("Events");
       int nFiles = chain_unmerged->Add( unmerged_path + "/ntuple_*.root");
       if (nFiles == 0) {
-        cout << "Error! Unmerged files not found. Aborting..." << endl;
+        cout << "ERROR! Unmerged files not found. Aborting..." << endl;
         return 99; 
       }
       nEvts_unmerged = chain_unmerged->GetEntries();
       if( nEvts_unmerged != nEvts_chain ) {
         countsMatch = false;
-        printColor(" Too few merged events! ", 91, humanUser);
+        printColor("ERROR! Too few merged events! ", 91, humanUser);
       }
       cout << "Evts in unmerged sample:  " << nEvts_unmerged << endl;
     }
@@ -222,7 +222,7 @@ int checkCMS3( TString samplePath = "", TString unmerged_path = "", bool useFilt
 
   if( countsMatch ) printColor("            Matched", 92, humanUser);
   else {
-    printColor("            MISMATCH!", 91, humanUser);
+    printColor("ERROR!            Counts mismatch!", 91, humanUser);
     nProblems++;
   }
 
@@ -278,7 +278,7 @@ int checkCMS3( TString samplePath = "", TString unmerged_path = "", bool useFilt
     cout << "Cross-section: ";
     if( nZeros_xsec == 0 ) printColor("No zeros found", 92, humanUser);
     else {
-      sprintf(message, "%lld events with zeros!", nZeros_xsec);
+      sprintf(message, "ERROR! %lld events with zeros in evt_xsec_incl!", nZeros_xsec);
       printColor(message, 91, humanUser);
       nProblems++;
     }
@@ -286,7 +286,7 @@ int checkCMS3( TString samplePath = "", TString unmerged_path = "", bool useFilt
     cout << "k factor:      ";
     if( nZeros_kfact == 0 ) printColor("No zeros found", 92, humanUser);
     else {
-      sprintf(message, "%lld events with zeros!", nZeros_kfact);
+      sprintf(message, "ERROR! %lld events with zeros in evt_kfactor!", nZeros_kfact);
       printColor(message, 91, humanUser);
       nProblems++;
     }
@@ -294,7 +294,7 @@ int checkCMS3( TString samplePath = "", TString unmerged_path = "", bool useFilt
     cout << "Filter eff:    ";
     if( nZeros_filteff == 0 ) printColor("No zeros found", 92, humanUser);
     else {
-      sprintf(message, "%lld events with zeros!", nZeros_filteff);
+      sprintf(message, "ERROR! %lld events with zeros in evt_filt_eff!", nZeros_filteff);
       printColor(message, 91, humanUser);
       nProblems++;
     }
@@ -302,7 +302,7 @@ int checkCMS3( TString samplePath = "", TString unmerged_path = "", bool useFilt
     cout << "scale1fb:      ";
     if( nZeros_scale1fb == 0 ) printColor("No zeros found", 92, humanUser);
     else {
-      sprintf(message, "%lld events with zeros!", nZeros_scale1fb);
+      sprintf(message, "ERROR! %lld events with zeros in evt_scale1fb!", nZeros_scale1fb);
       printColor(message, 91, humanUser);
       nProblems++;
     }
@@ -323,7 +323,7 @@ int checkCMS3( TString samplePath = "", TString unmerged_path = "", bool useFilt
     // cout << "test_scale1fb: " << test_scale1fb << ". Consistency: " << (test_scale1fb - scale1fb) / scale1fb << endl;
     if( ((test_scale1fb - scale1fb) / scale1fb) < 0.000001 ) printColor("                 CONSISTENT ", 92, humanUser);
     else {
-      printColor("                 INCONSISTENT! ", 91, humanUser);
+      printColor("ERROR!                Inconsistent scale1fb! ", 91, humanUser);
       nProblems++;
     }
 
@@ -368,20 +368,13 @@ int checkCMS3( TString samplePath = "", TString unmerged_path = "", bool useFilt
   /////////////////////////////////////////////////////////////////////////////////
   
   cout << "\n\n=============== RESULTS =========================" << endl;  
-  cout << "\nProblems found: ";
+  cout << "\nTotal problems found: ";
   if (nProblems==0) printColor("0", 92, humanUser);
   else {
     sprintf(message, "%d", nProblems);
     printColor(message, 91, humanUser);
   }
   cout << endl;
-
-  if (!humanUser){
-    ofstream myfile;
-    myfile.open("crab_status_logs/temp.txt");
-    if (nProblems == 0) myfile << sampleName << " " << chain->GetEntries() << endl;
-    myfile.close();
-  }
 
   return nProblems;
 }

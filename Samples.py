@@ -6,6 +6,7 @@ try:
     from CRABAPI.RawCommand import crabCommand
     from CRABClient.UserUtilities import setConsoleLogLevel
     from CRABClient.ClientUtilities import LOGLEVEL_MUTE
+    # I recommend putting `Root.ErrorIgnoreLevel: Error` in your .rootrc file
     from ROOT import TFile, TH1F
 except:
     print ">>> Make sure to source setup.sh first!"
@@ -21,14 +22,16 @@ class Sample:
         self.fake_submission = False
         self.fake_status = True
         self.fake_crab_done = True
-        self.fake_legit_sweeproot = False
+        self.fake_legit_sweeproot = True
         self.fake_miniaod_map = True
         self.fake_merge_lists = True
+        self.fake_check = True
         self.specialdir_test = True
 
         # dirs are wrt the base directory where this script is located
         self.pfx_pset = 'pset' # where to hold the psets
         self.pfx_crab = 'crab' # where to keep all crab tasks
+
         self.sample = {
                 "basedir" : os.getcwd()+"/",
                 "dataset" : dataset,
@@ -46,6 +49,7 @@ class Sample:
                 "status" : "new", # general sample status
                 "crab": { }, # crab task information here
                 "postprocessing": { }, # postprocessing counts for monitor
+                "checks": { }, # checkCMS3 info for monitor
                 "ijob_to_miniaod": { }, # map from ijob to list of miniaod
                 "imerged_to_ijob": { }, # map from imerged to iunmerged
                 "ijob_to_nevents": { }, # map from ijob to (nevents, nevents_eff)
@@ -538,6 +542,44 @@ class Sample:
             if " submitted " in submit_output: 
                 self.do_log("job for merged_ntuple_%i.root submitted successfully" % imerged)
 
+    
+    def make_metadata(self):
+        # TODO
+        # make metadata and copy it to self.sample["crab"]["outputdir"]+"/merged/"
+        pass
+
+    def copy_files(self):
+        # TODO
+        # move merged files to final resting place
+        print "Will do:"
+        print "mv %s/merged/* to %s/" % (self.sample["crab"]["outputdir"], self.sample["finaldir"])
+        pass
+
+    def check_output(self):
+        if self.fake_check: return True
+        output_dir = self.sample["crab"]["outputdir"]
+        cmd = """( cd scripts; root -n -b -q -l "checkCMS3.C(\\"{0}/merged\\", \\"{0}\\", 0,0)"; )""".format(output_dir)
+        self.do_log("started running checkCMS3")
+        out = u.get(cmd)
+        self.do_log("finished running checkCMS3")
+
+        # out = """
+        # ERROR!                Inconsistent scale1fb!
+        # =============== RESULTS =========================
+        # Total problems found: 1
+        # """
+
+        lines = out.split("\n")
+        problems = []
+        tot_problems = -1
+        for line in lines:
+            if "ERROR!" in line: problems.append(line.replace("ERROR!","").strip())
+            elif "Total problems found:" in line: tot_problems = int(line.split(":")[1].strip())
+
+        self.sample["checks"]["nproblems"] = tot_problems
+        self.sample["checks"]["problems"] = problems
+        return tot_problems == 0
+
 if __name__=='__main__':
 
     s = Sample( **{
@@ -591,6 +633,8 @@ if __name__=='__main__':
         s.make_merging_chunks()
         s.submit_merge_jobs()
 
-    print s.is_merging_done()
+    if s.is_merging_done():
+        if s.check_output():
+            s.copy_files()
 
-    pprint.pprint( s.sample )
+    # pprint.pprint( s.sample )
