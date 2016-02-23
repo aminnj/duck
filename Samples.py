@@ -479,6 +479,9 @@ class Sample:
         condor_log_files = "/data/tmp/%s/%s/%s.log" % (self.sample["user"],shortname,datetime.datetime.now().strftime("+%Y.%m.%d-%H.%M.%S"))
         std_log_files = "/data/tmp/%s/%s/std_logs/" % (self.sample["user"],shortname)
         input_files = ",".join([executable_script, merge_script, addbranches_script])
+        nevents_both = self.sample['ijob_to_nevents'].values()
+        nevents = sum([x[0] for x in nevents_both])
+        nevents_effective = sum([x[1] for x in nevents_both])
 
         condor_params = {
                 "exe": executable_script,
@@ -522,9 +525,6 @@ class Sample:
 
         for imerged in imerged_list:
             input_indices=",".join(map(str,self.sample['imerged_to_ijob'][imerged]))
-            nevents_both = [self.sample['ijob_to_nevents'][i] for i in self.sample['imerged_to_ijob'][imerged]]
-            nevents = sum([x[0] for x in nevents_both])
-            nevents_effective = sum([x[1] for x in nevents_both])
 
             input_arguments = " ".join(map(str,[unmerged_dir, input_indices, imerged, nevents, nevents_effective, xsec, kfactor, efactor]))
             condor_params["args"] = input_arguments
@@ -586,12 +586,11 @@ if __name__=='__main__':
         s.crab_parse_status()
 
     if s.is_crab_done():
-        pass
 
-        # s.make_miniaod_map()
-        # s.make_merging_chunks()
-        # s.submit_merge_jobs()
+        s.make_miniaod_map()
+        s.make_merging_chunks()
+        s.submit_merge_jobs()
 
-    # print s.is_merging_done()
+    print s.is_merging_done()
 
     pprint.pprint( s.sample )
