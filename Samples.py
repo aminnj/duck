@@ -86,7 +86,7 @@ class Sample:
         self.sample["crab"]["resubmissions"] = 0 # number of times we've "successfully" resubmitted a crab job
 
 
-        self.crab_status_res = None
+        self.crab_status_res = { }
 
 
         self.set_sample_specifics()

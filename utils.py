@@ -28,6 +28,10 @@ def copy_jecs():
         if not os.path.isfile(jec):
             os.system("cp /nfs-7/userdata/JECs/%s ." % jec)
 
+def copy_json():
+    # todo: change directory and make it if it doesn't exist
+    cmd("cp data.json ~/public_html/autotupletest/")
+
 
 def proxy_renew():
     # http://www.t2.ucsd.edu/tastwiki/bin/view/CMS/LongLivedProxy
