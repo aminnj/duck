@@ -300,6 +300,14 @@ class Sample:
             self.do_log("ERROR getting status:",e)
             return 0 # failed
 
+    def crab_resubmit(self):
+        try:
+            out = crabCommand('resubmit', dir=self.sample["crab"]["taskdir"], proxy=u.get_proxy_file())
+            return out["status"] == "SUCCESS"
+        except Exception as e:
+            self.do_log("ERROR resubmitting",e)
+            return 0 # failed
+
 
     def crab_parse_status(self):
         if not self.crab_status_res: if self.crab_status()
@@ -320,20 +328,32 @@ class Sample:
             self.do_log("can't get status right now (is probably too new)")
             return
 
+        if d_crab["status"] == "FAILED":
+            self.crab_resubmit()
+
         # population of each status (running, failed, etc.)
         for status,jobs in stat["jobsPerStatus"].items():
             d_crab["breakdown"][status] = jobs
 
         # find most common error (if exists)
         error_codes, details = [], []
+        most_common_detail = "n/a"
         for job in stat["jobs"].values():
             if "Error" in job.keys():
                 error_codes.append(job["Error"][0])
-                details.append(job["Error"][2]["details"])
-        if len(error_codes) > 0 and len(details) > 0:
+                try:
+                    details.append(job["Error"][2]["details"])
+                except: 
+                    if len(job["Error"]) > 2: details.append(job["Error"][1])
+
+        
+        if len(details) > 0:
+            most_common_detail = max(set(details), key=details.count)
+
+        if len(error_codes) > 0:
             most_common_error_code = max(set(error_codes), key=error_codes.count)
             count = error_codes.count(most_common_error_code)
-            most_common_detail = details[error_codes.index(most_common_error_code)]
+
             d_crab["commonerror"] = "%i jobs (%.1f%%) failed with error code %s: %s" \
                     % (count, 100.0*count/d_crab["njobs"], most_common_error_code, most_common_detail)
 
