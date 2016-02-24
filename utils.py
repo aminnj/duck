@@ -22,6 +22,12 @@ def proxy_hours_left():
     except: hours = 0
     return hours
 
+def copy_jecs():
+    import params
+    for jec in params.jecs:
+        if not os.path.isfile(jec):
+            os.system("cp /nfs-7/userdata/JECs/%s ." % jec)
+
 
 def proxy_renew():
     # http://www.t2.ucsd.edu/tastwiki/bin/view/CMS/LongLivedProxy

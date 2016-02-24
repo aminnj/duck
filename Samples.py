@@ -89,7 +89,7 @@ class Sample:
         buff += "[%s]   requestname = %s\n" % (self.pfx, self.sample["crab"]["requestname"])
         buff += "[%s]   pset = %s\n" % (self.pfx, self.sample["pset"])
 
-        if self.sample["crab"]:
+        if "status" in self.sample["crab"]:
             buff += "[%s]   CRAB status %s for %i jobs using schedd %s\n" \
                     % (self.pfx, self.sample["crab"]["status"], self.sample["crab"]["njobs"], self.sample["crab"]["schedd"])
             buff += "[%s]   Output dir: %s\n" % (self.pfx, self.sample["crab"]["outputdir"])
@@ -104,6 +104,11 @@ class Sample:
         del new_dict["ijob_to_miniaod"]
         del new_dict["ijob_to_nevents"]
         return new_dict
+
+
+    def get_status(self):
+        return self.sample["status"]
+
 
     def do_log(self, text):
         print "[%s] %s" % (self.pfx, text)
@@ -204,17 +209,11 @@ class Sample:
             self.do_log("made pset %s!" % (pset_out_fname))
 
 
-    def copy_jecs(self):
-        for jec in params.jecs:
-            if not os.path.isfile(jec):
-                os.system("cp /nfs-7/userdata/JECs/%s ." % jec)
-
-
     def crab_kill(self):
         try:
             out = crabCommand('kill', dir=self.sample["crab"]["taskdir"], proxy=u.get_proxy_file())
         except Exception as e:
-            self.dolog("ERROR killing:",e)
+            self.do_log("ERROR killing:",e)
             return 0
         return out["status"] == "SUCCESS"
 
@@ -230,6 +229,7 @@ class Sample:
         # first try to see if the job already exists naively
         if "uniquerequestname" in self.sample["crab"]:
             self.do_log("already submitted crab jobs")
+            self.sample["status"] = "crab"
             return 1
 
         # more robust check
@@ -240,6 +240,7 @@ class Sample:
             self.sample["crab"]["uniquerequestname"] = uniquerequestname
             self.sample["crab"]["datetime"] = uniquerequestname.split(":")[0].strip()
             self.do_log("already submitted crab jobs")
+            self.sample["status"] = "crab"
             return 1
 
         try:
@@ -255,7 +256,7 @@ class Sample:
             self.sample["status"] = "crab"
             return 1 # succeeded
         except Exception as e:
-            self.dolog("ERROR submitting:",e)
+            self.do_log("ERROR submitting:",e)
             return 0 # failed
 
 
@@ -279,7 +280,7 @@ class Sample:
             self.crab_status_res = out
             return 1 # succeeded
         except Exception as e:
-            self.dolog("ERROR getting status:",e)
+            self.do_log("ERROR getting status:",e)
             return 0 # failed
 
 
@@ -358,7 +359,7 @@ class Sample:
             return True
 
         self.do_log("ERROR: crab says COMPLETED but not all files are there")
-        self.do_log("# jobs, # root files, # log files = " % (njobs, len(rootfiles), len(logfiles)))
+        self.do_log("# jobs, # root files, # log files = " % (njobs, len(self.rootfiles), len(self.logfiles)))
         return False
 
 
@@ -642,7 +643,7 @@ if __name__=='__main__':
 
     s = Sample( **{
               "dataset": "/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/MINIAODSIM",
-              "gtag": "74X_mcRun2_asymptotic_v2", # isn't this the same as what's here ---^^^^^^^^^^^^^^^^^^^^^^^^?
+              "gtag": "74X_mcRun2_asymptotic_v2",
               "kfact": 1.0,
               "efact": 1.0,
               "xsec": 0.0234,
@@ -654,7 +655,7 @@ if __name__=='__main__':
     else:
         print "Proxy looks good"
 
-    s.copy_jecs()
+    u.copy_jecs()
     s.make_crab_config()
     s.make_pset()
 
