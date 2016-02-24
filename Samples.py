@@ -1,5 +1,6 @@
 import os, sys, glob
 import datetime, ast, tarfile, pprint
+import pickle
 
 try:
     from WMCore.Configuration import Configuration
@@ -83,8 +84,12 @@ class Sample:
         self.misc["rootfiles"] = []
         self.misc["logfiles"] = []
 
+        self.misc["last_saved"] = None # when was the last time we backuped up this sample data
+
 
         self.set_sample_specifics()
+
+        self.load() # load backup of this sample when we instantiate it
 
 
     def __getitem__(self, i):
@@ -127,6 +132,35 @@ class Sample:
 
     def do_log(self, text):
         print "[%s] %s" % (self.pfx, text)
+
+
+    def get_timestamp(self):
+        # return current time as a unix timestamp
+        return int(datetime.datetime.now().strftime("%s"))
+
+
+    def save(self):
+        backup_file = self.sample["crab"]["taskdir"]+"/backup.pkl"
+        self.misc["last_saved"] = self.get_timestamp()
+        d_tot = {"sample": self.sample, "misc": self.misc}
+        with open(backup_file,"w") as fhout:
+            pickle.dump(d_tot, fhout)
+        self.do_log("successfully backed up to %s" % backup_file)
+
+    def load(self):
+        backup_file = self.sample["crab"]["taskdir"]+"/backup.pkl"
+        if os.path.isfile(backup_file):
+            with open(backup_file,"r") as fhin:
+                d_tot = pickle.load(fhin)
+
+            self.sample = d_tot["sample"].copy()
+            self.misc = d_tot["misc"].copy()
+            last_saved = self.misc["last_saved"]
+            if last_saved:
+                min_ago = round((self.get_timestamp() - last_saved) / 60.0)
+                self.do_log("successfully loaded %s which was last saved %i minutes ago" % (backup_file, min_ago)
+            else:
+                self.do_log("successfully loaded %s" % (backup_file)
 
 
     def set_sample_specifics(self):
@@ -318,7 +352,7 @@ class Sample:
                 "commonerror": None,
                 "schedd": stat.get("schedd"),
                 "njobs": len(stat["jobs"]),
-                "time": int(datetime.datetime.now().strftime("%s")),
+                "time": self.get_timestamp(),
                 "breakdown": {
                     "unsubmitted": 0, "idle": 0, "running": 0, "failed": 0,
                     "transferring": 0, "transferred": 0, "cooloff": 0, "finished": 0,
