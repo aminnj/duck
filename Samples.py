@@ -17,25 +17,36 @@ import utils as u
 
 class Sample:
 
-    def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, xsec=None):
+    def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, xsec=None, debug=True):
+
+        setConsoleLogLevel(LOGLEVEL_MUTE)
 
         # debug bools
-        self.fake_submission = False
-        self.fake_status = True
-        self.fake_crab_done = True
-        self.fake_legit_sweeproot = True
-        self.fake_miniaod_map = True
-        self.fake_merge_lists = True
-        self.fake_check = True
-        self.fake_copy = True
-        self.specialdir_test = True
+        if debug:
+            self.fake_submission = False
+            self.fake_status = True
+            self.fake_crab_done = True
+            self.fake_legit_sweeproot = True
+            self.fake_miniaod_map = True
+            self.fake_merge_lists = True
+            self.fake_check = True
+            self.fake_copy = True
+            self.specialdir_test = True
+        else:
+            self.fake_submission = False
+            self.fake_status = False
+            self.fake_crab_done = False
+            self.fake_legit_sweeproot = False
+            self.fake_miniaod_map = False
+            self.fake_merge_lists = False
+            self.fake_check = False
+            self.fake_copy = False
+            self.specialdir_test = True
 
         # dirs are wrt the base directory where this script is located
-        self.pfx_pset = 'pset' # where to hold the psets
-        self.pfx_crab = 'crab' # where to keep all crab tasks
 
         self.sample = {
-                "basedir" : os.getcwd()+"/",
+                "basedir" : "",
                 "dataset" : dataset,
                 "user" : os.getenv("USER"),
                 "cms3tag" : params.cms3tag,
@@ -56,30 +67,32 @@ class Sample:
                 "imerged_to_ijob": { }, # map from imerged to iunmerged
                 "ijob_to_nevents": { }, # map from ijob to (nevents, nevents_eff)
                 }
-        self.sample["shortname"] = dataset.split("/")[1]+"_"+dataset.split("/")[2]
-        self.sample["shortname"] = dataset.split("/")[1]+"_"+dataset.split("/")[2]
 
         self.sample["crab"]["requestname"] = self.sample["shortname"][:99] # damn crab has size limit for name
         self.sample["crab"]["outputdir"] = None
-        self.sample["crab"]["taskdir"] = self.pfx_crab+"/crab_"+self.sample["crab"]["requestname"]
+        self.sample["crab"]["taskdir"] = self.misc["pfx_crab"]+"/crab_"+self.sample["crab"]["requestname"]
         self.sample["crab"]["datetime"] = None # "160220_151313" from crab request name
 
-        self.crab_config = None
-        self.crab_status_res = { }
+        self.misc = {}
+        self.misc["pfx_pset"] = 'pset' # where to hold the psets
+        self.misc["pfx_crab"] = 'crab' # where to keep all crab tasks
 
-        self.rootfiles = []
-        self.logfiles = []
+        self.misc["crab_config"] = None
+        self.misc["handled_more_than_1k"] = False
+        self.misc["rootfiles"] = []
+        self.misc["logfiles"] = []
 
-        self.handled_more_than_1k = False
-
-        self.pfx = self.sample["shortname"][:17] + "..."
-        setConsoleLogLevel(LOGLEVEL_MUTE)
 
         self.set_sample_specifics()
 
-    def __getitem__(self, i): return self.sample[i]
 
-    def __setitem__(self, k, v): self.sample[k] = v
+    def __getitem__(self, i):
+        return self.sample[i]
+
+
+    def __setitem__(self, k, v):
+        self.sample[k] = v
+    
 
     def __str__(self):
         buff  = "[%s] %s: %s\n" % (self.pfx, self.sample["status"], self.sample["dataset"])
@@ -97,6 +110,7 @@ class Sample:
                 if num == 0: continue
                 buff += "[%s]     %s: %i\n" % (self.pfx, cstat, num)
         return buff
+
 
     def get_slimmed_dict(self):
         new_dict = self.sample.copy()
@@ -126,35 +140,36 @@ class Sample:
         if self.sample["isdata"]: self.sample["pset"] = params.pset_data
 
         # figure out specialdir automatically
+        if "50ns" in ds: self.sample["specialdir"] = "run2_50ns"
+        elif "RunIISpring15MiniAODv2" in ds: self.sample["specialdir"] = "run2_fastsim"
+        elif "RunIISpring15FSPremix" in ds: self.sample["specialdir"] = "run2_fastsim"
+        elif "RunIISpring15MiniAODv2" in ds: self.sample["specialdir"] = "run2_25ns_MiniAODv2"
+        elif "25ns" in ds: self.sample["specialdir"] = "run2_25ns"
+
         if self.specialdir_test:
             self.sample["specialdir"] = "test"
-        else:
 
-            if "50ns" in ds: self.sample["specialdir"] = "run2_50ns"
-            elif "RunIISpring15MiniAODv2" in ds: self.sample["specialdir"] = "run2_fastsim"
-            elif "RunIISpring15FSPremix" in ds: self.sample["specialdir"] = "run2_fastsim"
-            elif "RunIISpring15MiniAODv2" in ds: self.sample["specialdir"] = "run2_25ns_MiniAODv2"
-            elif "25ns" in ds: self.sample["specialdir"] = "run2_25ns"
-
-
+        self.sample["basedir"] = os.getcwd()+"/",
+        self.sample["shortname"] = dataset.split("/")[1]+"_"+dataset.split("/")[2]
         self.sample["finaldir"] = "/hadoop/cms/store/group/snt/%s/%s/%s/" \
                 % (self.sample["specialdir"], self.sample["shortname"], self.sample["cms3tag"].split("_")[-1])
+        self.pfx = self.sample["shortname"][:17] + "..."
 
     def make_crab_config(self):
-        if self.crab_config is not None: 
+        if self.misc["crab_config"] is not None: 
             self.do_log("crab config already made, not remaking")
             return
 
         config = Configuration()
         config.section_('General')
-        config.General.workArea = self.pfx_crab # all crab output goes into crab/
+        config.General.workArea = self.misc["pfx_crab"] # all crab output goes into crab/
         config.General.transferOutputs = True
         config.General.transferLogs = True
         config.General.requestName = self.sample["crab"]["requestname"]
         config.section_('JobType')
         config.JobType.inputFiles = params.jecs
         config.JobType.pluginName = 'Analysis'
-        config.JobType.psetName = "%s/%s_cfg.py" % (self.pfx_pset, self.sample["shortname"])
+        config.JobType.psetName = "%s/%s_cfg.py" % (self.misc["pfx_pset"], self.sample["shortname"])
         config.section_('Data')
         config.Data.allowNonValidInputDataset = True
         config.Data.inputDataset = self.sample["dataset"]
@@ -163,14 +178,14 @@ class Sample:
         config.Data.inputDBS = "phys03" if self.sample["dataset"].endswith("/USER") else "global"
         config.section_('Site')
         config.Site.storageSite = 'T2_US_UCSD'
-        self.crab_config = config
+        self.misc["crab_config"] = config
 
     
     def make_pset(self):
-        if not os.path.isdir(self.pfx_pset): os.makedirs(self.pfx_pset)
+        if not os.path.isdir(self.misc["pfx_pset"]): os.makedirs(self.misc["pfx_pset"])
 
         pset_in_fname = params.cmssw_ver+"/src/CMS3/NtupleMaker/test/"+self.sample["pset"]
-        pset_out_fname = "%s/%s_cfg.py" % (self.pfx_pset, self.sample["shortname"])
+        pset_out_fname = "%s/%s_cfg.py" % (self.misc["pfx_pset"], self.sample["shortname"])
 
         if os.path.isfile(pset_out_fname): 
             self.do_log("pset already made, not remaking")
@@ -220,9 +235,9 @@ class Sample:
 
     def crab_delete_dir(self):
         self.do_log("deleting %s" % (self.sample["crab"]["taskdir"]))
-        self.do_log("deleting pset: %s/%s_cfg.py" % (self.pfx_pset, self.sample["shortname"]))
+        self.do_log("deleting pset: %s/%s_cfg.py" % (self.misc["pfx_pset"], self.sample["shortname"]))
         os.system("rm -rf %s" % self.sample["crab"]["taskdir"])
-        os.system("rm %s/%s_cfg.py" % (self.pfx_pset, self.sample["shortname"]))
+        os.system("rm %s/%s_cfg.py" % (self.misc["pfx_pset"], self.sample["shortname"]))
 
 
     def crab_submit(self):
@@ -247,7 +262,9 @@ class Sample:
             if self.fake_submission:
                 out = {'uniquerequestname': '160222_073351:namin_crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1', 'requestname': 'crab_ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8_RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1'}
             else:
-                out = crabCommand('submit', config = self.crab_config, proxy=u.get_proxy_file())
+                if not self.misc["crab_config"]: self.make_crab_config()
+                self.make_pset()
+                out = crabCommand('submit', config = self.misc["crab_config"], proxy=u.get_proxy_file())
 
             datetime = out["uniquerequestname"].split(":")[0]
             self.sample["crab"]["uniquerequestname"] = out["uniquerequestname"]
@@ -285,7 +302,7 @@ class Sample:
 
 
     def crab_parse_status(self):
-        stat = self.crab_status_res
+        if not self.crab_status_res: if self.crab_status()
         try:
             d_crab = {
                 "status": stat.get("status"),
@@ -326,7 +343,7 @@ class Sample:
 
 
     def handle_more_than_1k(self):
-        if self.handled_more_than_1k: return
+        if self.misc["handled_more_than_1k"]: return
 
         output_dir = self.sample["crab"]["outputdir"]
         without_zeros = self.sample["crab"]["outputdir"].replace("0000","")
@@ -337,7 +354,7 @@ class Sample:
             u.cmd("mv {0}/{1}/log/* {0}/{2}/log/".format(without_zeros, kilobatch, "0000"))
 
         self.do_log("copied files from .../*/ to .../0000/")
-        self.handled_more_than_1k = True
+        self.misc["handled_more_than_1k"] = True
 
 
     def is_crab_done(self):
@@ -353,13 +370,13 @@ class Sample:
 
 
         njobs = self.sample["crab"]["njobs"]
-        self.rootfiles = glob.glob(self.sample["crab"]["outputdir"] + "/*.root")
-        self.logfiles = glob.glob(self.sample["crab"]["outputdir"] + "/log/*.tar.gz")
-        if njobs == len(self.rootfiles) and njobs == len(self.logfiles):
+        self.misc["rootfiles"] = glob.glob(self.sample["crab"]["outputdir"] + "/*.root")
+        self.misc["logfiles"] = glob.glob(self.sample["crab"]["outputdir"] + "/log/*.tar.gz")
+        if njobs == len(self.misc["rootfiles"]) and njobs == len(self.misc["logfiles"]):
             return True
 
         self.do_log("ERROR: crab says COMPLETED but not all files are there")
-        self.do_log("# jobs, # root files, # log files = " % (njobs, len(self.rootfiles), len(self.logfiles)))
+        self.do_log("# jobs, # root files, # log files = " % (njobs, len(self.misc["rootfiles"]), len(self.misc["logfiles"])))
         return False
 
 
@@ -379,7 +396,7 @@ class Sample:
 
         if not self.sample["ijob_to_miniaod"]:
             self.do_log("making map from unmerged number to miniaod name")
-            for logfile in self.logfiles:
+            for logfile in self.misc["logfiles"]:
                 with  tarfile.open(logfile, "r:gz") as tar:
                     for member in tar:
                         if "FrameworkJobReport" not in member.name: continue
@@ -429,7 +446,7 @@ class Sample:
             self.do_log("making map from merged index to unmerged indicies")
             group, groups = [], []
             tot_size = 0.0
-            for rfile in self.rootfiles:
+            for rfile in self.misc["rootfiles"]:
                 is_bad, nevents, nevents_eff, file_size = self.get_rootfile_info(rfile)
                 ijob = int(rfile.split("_")[-1].replace(".root",""))
                 self.sample["ijob_to_nevents"][ijob] = [nevents, nevents_eff]
@@ -647,6 +664,7 @@ if __name__=='__main__':
               "kfact": 1.0,
               "efact": 1.0,
               "xsec": 0.0234,
+              "debug": True
               } )
 
     if u.proxy_hours_left() < 5:
@@ -656,12 +674,10 @@ if __name__=='__main__':
         print "Proxy looks good"
 
     u.copy_jecs()
-    s.make_crab_config()
-    s.make_pset()
 
     s.crab_submit()
-    if s.crab_status():
-        s.crab_parse_status()
+
+    s.crab_parse_status()
 
     if s.is_crab_done():
 
