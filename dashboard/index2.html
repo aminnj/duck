@@ -16,43 +16,98 @@
 
             function getProgress(sample) {
                 var stat = sample["status"];
-                var done = sample["done"];
-                var tot = sample["total"];
+                var done = 0;
+                var tot = 1;
 
                 if (stat == "new") return 0.0;
-                else if (stat == "submitting") return 5.0;
-                else if (stat == "crab") return 5.0 + 40.0*(done/tot);
-                else if (stat == "mergelists") return 45.0;
-                else if (stat == "postprocessing") return 55.0 + 35.0*(done/tot);
-                else if (stat == "copying") return 95.0;
-                else if (stat == "done") return 100.0;
+                else if (stat == "crab") {
+
+                    done = sample["crab"]["breakdown"]["finished"];
+                    tot = sample["crab"]["njobs"];
+                    return 5.0 + 40.0*(done/tot);
+
+                } else if (stat == "postprocessing") {
+
+                    done = sample["postprocessing"]["done"];
+                    tot = sample["postprocessing"]["total"];
+                    return 55.0 + 35.0*(done/tot);
+
+                } else if (stat == "done") return 100.0;
                 else return -1.0;
+
+            }
+
+
+            function syntaxHighlight(json) {
+                json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                    var cls = 'number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'key';
+                        } else {
+                            cls = 'string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+            }
+
+            function getDetails(sample) {
+                var stat = sample["status"];
+
+                var buff = "";
+
+                if(stat == "crab") {
+
+                    var crab = sample["crab"];
+                    var breakdown = crab["breakdown"];
+
+                    buff += "<br><span class='bad'>failed: " + breakdown["failed"] + "</span>";
+                    buff += "<br>cooloff: " + breakdown["cooloff"];
+                    buff += "<br>idle: " + breakdown["idle"];
+                    buff += "<br>unsubmitted: " + breakdown["unsubmitted"];
+                    buff += "<br>running: " + breakdown["running"];
+                    buff += "<br>transferring: " + breakdown["transferring"];
+                    buff += "<br>transferred: " + breakdown["transferred"];
+                    buff += "<br><span class='good'>finished: " + breakdown["finished"] + "</span>";
+
+                }
+
+                return buff;
 
             }
 
             function parseJson(data) {
                 for(var i = 0; i < data["samples"].length; i++) {
-                    console.log(data["samples"][i]);
+                    var sample = data["samples"][i];
+                    console.log(sample);
                     var container = $("#section_1");
                     container.append("<br>");
-                    container.append("<a href='#/' class='thick' onClick=\"$('#details_"+i+"').slideToggle(150)\">"+data["samples"][i]["name"]+"</a>");
+                    container.append("<a href='#/' class='thick' onClick=\"$('#details_"+i+"').slideToggle(150)\">"+sample["dataset"]+"</a>");
 
                     container.append("<div class='pbar' id='pbar_"+i+"'><span id='pbartext_"+i+"' class='pbartext'></span></div>");
 
                     // FIXME, display:none
                     // container.append("<div id='details_"+i+"' style='display:none;'></div>");
-                    container.append("<div id='details_"+i+"' ></div>");
+                    container.append("<div id='details_"+i+"' class='details' ></div>");
 
                     $( "#pbar_"+i ).progressbar({max: 100});
 
-                    var pct = Math.round(getProgress(data["samples"][i]));
+                    var pct = Math.round(getProgress(sample));
 
                     var color = 'hsl(' + pct*1.2 + ', 70%, 50%)';
                     $("#pbar_"+i).progressbar("option","value",pct);
                     $("#pbar_"+i).find(".ui-progressbar-value").css({"background": color});
-                    $("#pbartext_"+i).text(data["samples"][i]["status"] + " [" + pct + "%]");
+                    $("#pbartext_"+i).text(sample["status"] + " [" + pct + "%]");
 
-                    $("#details_"+i).append(JSON.stringify(data["samples"][i]));
+                    // $("#details_"+i).append(getDetails(sample));
+                    // $("#details_"+i).append("<br>");
+                    $("#details_"+i).append("<pre>" + syntaxHighlight(JSON.stringify(sample, undefined, 4)) + "</pre>");
 
 
                 }
@@ -74,7 +129,8 @@
             $(function () {
                 // $.getJSON("http://uaf-6.t2.ucsd.edu/~namin/dump/test.json", function(data) { parseJson(data); });
                 // WOW CAN PUT EXTERNAL URLS HERE MAN!
-                $.getJSON("test.json", function(data) { parseJson(data); });
+                // $.getJSON("test.json", function(data) { parseJson(data); });
+                $.getJSON("data.json", function(data) { parseJson(data); });
 
             })
 
@@ -95,9 +151,9 @@
 
         <div id="container">
 
-            <div id="section_1" class="section"                      > section_1 </div>
-            <div id="section_2" class="section" style='display:none;'> section_2 </div>
-            <div id="section_3" class="section" style='display:none;'> section_3 </div>
+            <div id="section_1" class="section"                      ></div>
+            <div id="section_2" class="section" style='display:none;'></div>
+            <div id="section_3" class="section" style='display:none;'></div>
 
         </div>
 

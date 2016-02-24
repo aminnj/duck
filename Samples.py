@@ -133,7 +133,7 @@ class Sample:
 
 
     def do_log(self, text):
-        print "[%s] %s" % (self.pfx, text)
+        print "[%s] [%s] %s" % (datetime.datetime.now().strftime("%H:%M:%S"), self.pfx, text)
 
 
     def get_timestamp(self):
@@ -349,6 +349,8 @@ class Sample:
         stat = self.crab_status_res
         if not stat: self.crab_status()
 
+        print stat
+
         try:
             d_crab = {
                 "status": stat.get("status"),
@@ -543,7 +545,9 @@ class Sample:
 
     def get_merged_done(self):
         # return set of merged indices
-        files = os.listdir(self.sample["crab"]["outputdir"]+"/merged/")
+        merged_dir = self.sample["crab"]["outputdir"]+"/merged/"
+        if not os.path.isdir(merged_dir): return set()
+        files = os.listdir(merged_dir)
         files = [f for f in files if f.endswith(".root")]
         return set(map(lambda x: int(x.split("_")[-1].split(".")[0]), files))
 
@@ -661,6 +665,7 @@ class Sample:
         if self.fake_copy:
             print "Will do: mv %s/merged/* to %s/" % (self.sample["crab"]["outputdir"], self.sample["finaldir"])
         else:
+            u.cmd("mkdir -p %s/" % self.sample["finaldir"])
             u.cmd( "mv %s/merged/* to %s/" % (self.sample["crab"]["outputdir"], self.sample["finaldir"]) )
         self.do_log("finished copying files")
 

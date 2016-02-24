@@ -32,6 +32,17 @@ def copy_json():
     # todo: change directory and make it if it doesn't exist
     cmd("cp data.json ~/public_html/autotupletest/")
 
+def read_samples(filename="instructions.txt"):
+    samples = []
+    with open(filename, "r") as fhin:
+        for line in fhin.readlines():
+            if len(line) < 5: continue
+            parts = line.split()
+            if len(parts) < 5: continue
+            dataset, gtag, xsec, kfact, efact = parts
+            sample = { "dataset": dataset, "gtag": gtag, "kfact": kfact, "efact": efact, "xsec": xsec }
+            samples.append(sample)
+    return samples
 
 def proxy_renew():
     # http://www.t2.ucsd.edu/tastwiki/bin/view/CMS/LongLivedProxy
