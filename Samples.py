@@ -72,6 +72,7 @@ class Sample:
         self.sample["crab"]["outputdir"] = None
         self.sample["crab"]["taskdir"] = self.misc["pfx_crab"]+"/crab_"+self.sample["crab"]["requestname"]
         self.sample["crab"]["datetime"] = None # "160220_151313" from crab request name
+        self.sample["crab"]["resubmissions"] = 0 # number of times we've "successfully" resubmitted a crab job
 
         self.misc = {}
         self.misc["pfx_pset"] = 'pset' # where to hold the psets
@@ -329,7 +330,8 @@ class Sample:
             return
 
         if d_crab["status"] == "FAILED":
-            self.crab_resubmit()
+            if self.crab_resubmit():
+                self.sample["crab"]["resubmissions"] += 1
 
         # population of each status (running, failed, etc.)
         for status,jobs in stat["jobsPerStatus"].items():
