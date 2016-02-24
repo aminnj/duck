@@ -46,9 +46,19 @@ class Sample:
 
         # dirs are wrt the base directory where this script is located
 
+        self.misc = {}
+        self.misc["pfx_pset"] = 'pset' # where to hold the psets
+        self.misc["pfx_crab"] = 'crab' # where to keep all crab tasks
+        self.misc["crab_config"] = None
+        self.misc["handled_more_than_1k"] = False
+        self.misc["rootfiles"] = []
+        self.misc["logfiles"] = []
+        self.misc["last_saved"] = None # when was the last time we backuped up this sample data
+
         self.sample = {
                 "basedir" : "",
                 "dataset" : dataset,
+                "shortname": dataset.split("/")[1]+"_"+dataset.split("/")[2],
                 "user" : os.getenv("USER"),
                 "cms3tag" : params.cms3tag,
                 "gtag" : gtag,
@@ -75,16 +85,8 @@ class Sample:
         self.sample["crab"]["datetime"] = None # "160220_151313" from crab request name
         self.sample["crab"]["resubmissions"] = 0 # number of times we've "successfully" resubmitted a crab job
 
-        self.misc = {}
-        self.misc["pfx_pset"] = 'pset' # where to hold the psets
-        self.misc["pfx_crab"] = 'crab' # where to keep all crab tasks
 
-        self.misc["crab_config"] = None
-        self.misc["handled_more_than_1k"] = False
-        self.misc["rootfiles"] = []
-        self.misc["logfiles"] = []
-
-        self.misc["last_saved"] = None # when was the last time we backuped up this sample data
+        self.crab_status_res = None
 
 
         self.set_sample_specifics()
@@ -158,9 +160,9 @@ class Sample:
             last_saved = self.misc["last_saved"]
             if last_saved:
                 min_ago = round((self.get_timestamp() - last_saved) / 60.0)
-                self.do_log("successfully loaded %s which was last saved %i minutes ago" % (backup_file, min_ago)
+                self.do_log("successfully loaded %s which was last saved %i minutes ago" % (backup_file, min_ago))
             else:
-                self.do_log("successfully loaded %s" % (backup_file)
+                self.do_log("successfully loaded %s" % (backup_file))
 
 
     def set_sample_specifics(self):
@@ -184,8 +186,7 @@ class Sample:
         if self.specialdir_test:
             self.sample["specialdir"] = "test"
 
-        self.sample["basedir"] = os.getcwd()+"/",
-        self.sample["shortname"] = dataset.split("/")[1]+"_"+dataset.split("/")[2]
+        self.sample["basedir"] = os.getcwd()+"/"
         self.sample["finaldir"] = "/hadoop/cms/store/group/snt/%s/%s/%s/" \
                 % (self.sample["specialdir"], self.sample["shortname"], self.sample["cms3tag"].split("_")[-1])
         self.pfx = self.sample["shortname"][:17] + "..."
@@ -345,7 +346,9 @@ class Sample:
 
 
     def crab_parse_status(self):
-        if not self.crab_status_res: if self.crab_status()
+        stat = self.crab_status_res
+        if not stat: self.crab_status()
+
         try:
             d_crab = {
                 "status": stat.get("status"),
@@ -358,9 +361,9 @@ class Sample:
                     "transferring": 0, "transferred": 0, "cooloff": 0, "finished": 0,
                 }
             }
-        except:
+        except Exception as e:
             # must be the case that not all this info exists because it was recently submitted
-            self.do_log("can't get status right now (is probably too new)")
+            self.do_log("can't get status right now (is probably too new): "+str(e))
             return
 
         if d_crab["status"] == "FAILED":
@@ -746,6 +749,7 @@ if __name__=='__main__':
         if s.check_output():
             s.copy_files()
 
+    s.save()
 
     pprint.pprint(s.get_slimmed_dict())
 
