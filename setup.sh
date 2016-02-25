@@ -7,6 +7,8 @@ export CMS3TAG=$(python -c "import params; print params.cms3tag")
 export CMSSW_VER=$(python -c "import params; print params.cmssw_ver")
 export BASEDIR=`pwd`
 
+echo "[setup] Using $CMS3TAG and $CMSSW_VER for this campaign"
+
 if [ ! -d $CMSSW_VER ]; then
     scramv1 p -n ${CMSSW_VER} CMSSW $CMSSW_VER
     cd ${CMSSW_VER}
@@ -27,7 +29,7 @@ if [ ! -d $CMSSW_VER ]; then
       scram b -j 10
     fi
 else
-    echo "$CMSSW_VER already exists, only going to set environment then"
+    echo "[setup] $CMSSW_VER already exists, only going to set environment then"
     cd ${CMSSW_VER}
     cmsenv
 fi

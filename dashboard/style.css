@@ -8,7 +8,7 @@
     padding: 0px 10px 10px 10px;
     vertical-align: middle;
     font-weight: bold;
-    line-height: 85px;
+    line-height: 65px;
     z-index: -1;
     background-color: #eee; 
     white-space: nowrap;
@@ -19,9 +19,9 @@
 }
 .mainlogo {
     position: relative;
-    top: 20px;
+    top: 15px;
     padding: 0px 10px 0px 10px;
-    height:60px;
+    height:50px;
 }
 
 /* BODY CONTENTS */

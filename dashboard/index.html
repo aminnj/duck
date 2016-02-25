@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>autoTuple Monitoring</title>
+        <link rel="icon" type="image/png" sizes="96x96" href="images/favicon.png">
+        <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+        <link rel="stylesheet" href="style.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+        <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+        <script src="main.js"></script>
+
+    </head>
+
+    <body>
+
+        <div id="topBar">
+            <img class="mainlogo" src="images/crab.png" />
+            <span class="thin">auto</span>Tupler
+            <span class="thin">
+                &emsp;
+                <a href="#" id="toggle_all" onClick="expandAll()">show details</a>&ensp;|&ensp;
+                <a href="#" onClick="$('#section_3').slideToggle(150)">section_3</a>
+            </span>
+        </div>
+        <div id="colorstrip"></div>
+
+        <div id="container">
+
+            <span id="last_updated" style="float:right"></span>
+            <div id="section_1" class="section"                      ></div>
+            <div id="section_3" class="section" style='display:none;'></div>
+
+        </div>
+
+    </body>
+</html>

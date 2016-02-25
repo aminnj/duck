@@ -4,6 +4,7 @@ import commands
 import pycurl 
 import StringIO 
 import ast
+import datetime
 
 def get(cmd, returnStatus=False):
     status, out = commands.getstatusoutput(cmd)
@@ -39,8 +40,10 @@ def read_samples(filename="instructions.txt"):
             if len(line) < 5: continue
             parts = line.split()
             if len(parts) < 5: continue
-            dataset, gtag, xsec, kfact, efact = parts
-            sample = { "dataset": dataset, "gtag": gtag, "kfact": kfact, "efact": efact, "xsec": xsec }
+            dataset, gtag, xsec, kfact, efact = parts[:5]
+            sample = { "dataset": dataset, "gtag": gtag, "kfact": float(kfact), "efact": float(efact), "xsec": float(xsec) }
+            # if len(parts) == 6 and 
+            if len(parts) == 6: sample["sparms"] = parts[5].split(",")
             samples.append(sample)
     return samples
 
@@ -53,6 +56,10 @@ def proxy_renew():
 def get_proxy_file():
     cert_file = "/home/users/{0}/.globus/proxy_for_{0}.file".format(os.getenv("USER"))
     return cert_file
+
+def get_timestamp():
+    # return current time as a unix timestamp
+    return int(datetime.datetime.now().strftime("%s"))
 
 def dataset_event_count(dataset):
     # 3 hours of work to figure out how the crab dbs api works and get this to work with only `cmsenv`....
@@ -83,6 +90,9 @@ if __name__=='__main__':
     # else:
     #     print "Proxy looks good"
 
-    print dataset_event_count('/DYJetsToLL_M-50_Zpt-150toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15DR74-Asympt25ns_MCRUN2_74_V9-v1/MINIAODSIM')
+    # print dataset_event_count('/DYJetsToLL_M-50_Zpt-150toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15DR74-Asympt25ns_MCRUN2_74_V9-v1/MINIAODSIM')
+
+    for samp in read_samples():
+        print samp
     
 

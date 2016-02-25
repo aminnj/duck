@@ -18,7 +18,7 @@ import utils as u
 
 class Sample:
 
-    def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, xsec=None, debug=True):
+    def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, xsec=None, sparms=[], debug=True):
 
         setConsoleLogLevel(LOGLEVEL_MUTE)
 
@@ -65,7 +65,7 @@ class Sample:
                 "kfact" : kfact,
                 "efact" : efact,
                 "xsec" : xsec,
-                "sparms": [], # always keep as list. e.g., ["mlsp","mstop"]
+                "sparms": sparms, # always keep as list. e.g., ["mlsp","mstop"]
                 "isdata": False, # by default, MC
                 "pset": "", # *_cfg.py pset location
                 "specialdir": "", # /hadoop/cms/store/group/snt/{specialdir}/ (e.g., run2_25ns, run2_fastsim)
@@ -136,14 +136,10 @@ class Sample:
         print "[%s] [%s] %s" % (datetime.datetime.now().strftime("%H:%M:%S"), self.pfx, text)
 
 
-    def get_timestamp(self):
-        # return current time as a unix timestamp
-        return int(datetime.datetime.now().strftime("%s"))
-
 
     def save(self):
         backup_file = self.sample["crab"]["taskdir"]+"/backup.pkl"
-        self.misc["last_saved"] = self.get_timestamp()
+        self.misc["last_saved"] = u.get_timestamp()
         d_tot = {"sample": self.sample, "misc": self.misc}
         with open(backup_file,"w") as fhout:
             pickle.dump(d_tot, fhout)
@@ -160,7 +156,7 @@ class Sample:
             self.misc = d_tot["misc"].copy()
             last_saved = self.misc["last_saved"]
             if last_saved:
-                min_ago = round((self.get_timestamp() - last_saved) / 60.0)
+                min_ago = round((u.get_timestamp() - last_saved) / 60.0)
                 self.do_log("successfully loaded %s which was last saved %i minutes ago" % (backup_file, min_ago))
             else:
                 self.do_log("successfully loaded %s" % (backup_file))
@@ -171,7 +167,6 @@ class Sample:
 
         # figure out pset automatically
         if ds.endswith("SIM"): self.sample["pset"] = params.pset_mc
-        if ds.startswith("/SMS"): self.sample["pset"] = params.pset_mc_fastsim
         if len(self.sample["sparms"]) > 0: self.sample["pset"] = params.pset_mc_fastsim
         if "FSPremix" in ds: self.sample["pset"] = params.pset_mc_fastsim
         if "FastAsympt" in ds: self.sample["pset"] = params.pset_mc_fastsim
@@ -265,7 +260,7 @@ class Sample:
         try:
             out = crabCommand('kill', dir=self.sample["crab"]["taskdir"], proxy=u.get_proxy_file())
         except Exception as e:
-            self.do_log("ERROR killing:",e)
+            self.do_log("ERROR killing: "+str(e))
             return 0
         return out["status"] == "SUCCESS"
 
@@ -310,7 +305,7 @@ class Sample:
             self.sample["status"] = "crab"
             return 1 # succeeded
         except Exception as e:
-            self.do_log("ERROR submitting:",e)
+            self.do_log("ERROR submitting: "+str(e))
             return 0 # failed
 
 
@@ -334,7 +329,7 @@ class Sample:
             self.crab_status_res = out
             return 1 # succeeded
         except Exception as e:
-            self.do_log("ERROR getting status:",e)
+            self.do_log("ERROR getting status: "+str(e))
             return 0 # failed
 
     def crab_resubmit(self):
@@ -342,7 +337,7 @@ class Sample:
             out = crabCommand('resubmit', dir=self.sample["crab"]["taskdir"], proxy=u.get_proxy_file())
             return out["status"] == "SUCCESS"
         except Exception as e:
-            self.do_log("ERROR resubmitting",e)
+            self.do_log("ERROR resubmitting "+str(e))
             return 0 # failed
 
 
@@ -358,7 +353,7 @@ class Sample:
                 "commonerror": None,
                 "schedd": stat.get("schedd"),
                 "njobs": len(stat["jobs"]),
-                "time": self.get_timestamp(),
+                "time": u.get_timestamp(),
                 "breakdown": {
                     "unsubmitted": 0, "idle": 0, "running": 0, "failed": 0,
                     "transferring": 0, "transferred": 0, "cooloff": 0, "finished": 0,
