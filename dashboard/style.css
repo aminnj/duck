@@ -62,7 +62,13 @@ body {
 .boolean { color: blue; }
 .null { color: magenta; }
 .key { color: red; }
-pre {outline: 1px solid #bbb; padding: 5px; margin: 5px; }
+pre {
+    font-size: 80%;
+    white-space: pre-wrap;
+    outline: 1px solid #bbb;
+    padding: 5px;
+    margin: 5px; 
+}
 
 .details {
     /* font-family: 'Inconsolata'; */

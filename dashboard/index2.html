@@ -22,14 +22,18 @@
                 if (stat == "new") return 0.0;
                 else if (stat == "crab") {
 
-                    done = sample["crab"]["breakdown"]["finished"];
-                    tot = sample["crab"]["njobs"];
+                    if("breakdown" in sample["crab"]) {
+                        done = sample["crab"]["breakdown"]["finished"];
+                        tot = sample["crab"]["njobs"];
+                    }
                     return 5.0 + 40.0*(done/tot);
 
                 } else if (stat == "postprocessing") {
 
-                    done = sample["postprocessing"]["done"];
-                    tot = sample["postprocessing"]["total"];
+                    if("postprocessing" in sample) {
+                        done = sample["postprocessing"]["done"];
+                        tot = sample["postprocessing"]["total"];
+                    }
                     return 55.0 + 35.0*(done/tot);
 
                 } else if (stat == "done") return 100.0;
@@ -37,8 +41,8 @@
 
             }
 
-
             function syntaxHighlight(json) {
+                // stolen from http://stackoverflow.com/questions/4810841/how-can-i-pretty-print-json-using-javascript
                 json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
                     var cls = 'number';
@@ -105,9 +109,18 @@
                     $("#pbar_"+i).find(".ui-progressbar-value").css({"background": color});
                     $("#pbartext_"+i).text(sample["status"] + " [" + pct + "%]");
 
-                    // $("#details_"+i).append(getDetails(sample));
-                    // $("#details_"+i).append("<br>");
-                    $("#details_"+i).append("<pre>" + syntaxHighlight(JSON.stringify(sample, undefined, 4)) + "</pre>");
+                    var jsStr = syntaxHighlight(JSON.stringify(sample, undefined, 4));
+
+                    // turn crab into a link to the dashboard
+                    if(("crab" in sample) && ("uniquerequestname" in sample["crab"])) {
+                        var urn = sample["crab"]["uniquerequestname"];
+                        var link = "http://dashb-cms-job.cern.ch/dashboard/templates/task-analysis/#user=default&refresh=0&table=Jobs&status=&site=&tid="+urn;
+                        jsStr = jsStr.replace("\"crab\":", " <a href='"+link+"' style='text-decoration: underline'>crab</a>: ");
+                    }
+
+                    // turn dataset into a link to DAS
+                    jsStr = jsStr.replace("\"dataset\":", " <a href='https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod%2Fglobal&input="+sample["dataset"]+"' style='text-decoration: underline'>dataset</a>: ");
+                    $("#details_"+i).append("<pre>" + jsStr + "</pre>");
 
 
                 }
@@ -142,7 +155,7 @@
             <span class="thin">auto</span>Tupler
             <span class="thin">
                 &emsp;
-                <a href="#" onClick="$('#section_1').slideToggle(150)">section_1</a>&ensp;|&ensp;
+                <!-- <a href="#" onClick="$('#section_1').slideToggle(150)">section_1</a>&ensp;|&ensp; -->
                 <a href="#" id="toggle_all" onClick="expandAll()">hide details</a>&ensp;|&ensp;
                 <a href="#" onClick="$('#section_3').slideToggle(150)">section_3</a>
             </span>
@@ -152,7 +165,7 @@
         <div id="container">
 
             <div id="section_1" class="section"                      ></div>
-            <div id="section_2" class="section" style='display:none;'></div>
+            <!-- <div id="section_2" class="section" style='display:none;'></div> -->
             <div id="section_3" class="section" style='display:none;'></div>
 
         </div>

@@ -53,7 +53,7 @@ class Sample:
         self.misc["handled_more_than_1k"] = False
         self.misc["rootfiles"] = []
         self.misc["logfiles"] = []
-        self.misc["last_saved"] = None # when was the last time we backuped up this sample data
+        self.misc["last_saved"] = None # when was the last time we backed up this sample data
 
         self.sample = {
                 "basedir" : "",
@@ -122,9 +122,9 @@ class Sample:
 
     def get_slimmed_dict(self):
         new_dict = self.sample.copy()
-        del new_dict["imerged_to_ijob"]
-        del new_dict["ijob_to_miniaod"]
-        del new_dict["ijob_to_nevents"]
+        # del new_dict["imerged_to_ijob"]
+        # del new_dict["ijob_to_miniaod"]
+        # del new_dict["ijob_to_nevents"]
         return new_dict
 
 
@@ -147,7 +147,8 @@ class Sample:
         d_tot = {"sample": self.sample, "misc": self.misc}
         with open(backup_file,"w") as fhout:
             pickle.dump(d_tot, fhout)
-        self.do_log("successfully backed up to %s" % backup_file)
+        # self.do_log("successfully backed up to %s" % backup_file)
+        self.do_log("successfully backed up")
 
     def load(self):
         backup_file = self.sample["crab"]["taskdir"]+"/backup.pkl"
@@ -346,10 +347,10 @@ class Sample:
 
 
     def crab_parse_status(self):
+        self.crab_status()
         stat = self.crab_status_res
-        if not stat: self.crab_status()
 
-        print stat
+        # print stat
 
         try:
             d_crab = {
