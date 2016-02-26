@@ -58,6 +58,7 @@ body {
 .good { color: #159515; }
 .bad { color: #FF3333; }
 .string { color: green; }
+.boldString { color: green; font-weight: bold; }
 .number { color: darkorange; }
 .boolean { color: blue; }
 .null { color: magenta; }
@@ -69,10 +70,8 @@ pre {
     padding: 5px;
     margin: 5px; 
 }
-
-.details {
-    /* font-family: 'Inconsolata'; */
-
+.lastUpdated {
+    float:right;
 }
 
 /* LINKS */

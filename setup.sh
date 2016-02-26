@@ -17,7 +17,7 @@ if [ ! -d $CMSSW_VER ]; then
     if [ ! -e /nfs-7/userdata/libCMS3/lib_${CMS3TAG}.tar.gz ]
     then
       echo "[setup] Making tar on-the-fly"
-      source $BASEDIR/bin/make_libCMS3.sh ${CMS3TAG} $CMSSW_VER
+      source $BASEDIR/scripts/make_libCMS3.sh ${CMS3TAG} $CMSSW_VER
       mv lib_${CMS3TAG}.tar.gz /nfs-7/userdata/libCMS3/lib_${CMS3TAG}.tar.gz
       cd $CMSSW_BASE
     else

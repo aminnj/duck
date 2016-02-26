@@ -122,9 +122,9 @@ class Sample:
 
     def get_slimmed_dict(self):
         new_dict = self.sample.copy()
-        # del new_dict["imerged_to_ijob"]
-        # del new_dict["ijob_to_miniaod"]
-        # del new_dict["ijob_to_nevents"]
+        del new_dict["imerged_to_ijob"]
+        del new_dict["ijob_to_miniaod"]
+        del new_dict["ijob_to_nevents"]
         return new_dict
 
 
@@ -204,14 +204,15 @@ class Sample:
         config.JobType.psetName = "%s/%s_cfg.py" % (self.misc["pfx_pset"], self.sample["shortname"])
         config.section_('Data')
         config.Data.allowNonValidInputDataset = True
+        config.Data.publication = False
         config.Data.inputDataset = self.sample["dataset"]
         config.Data.unitsPerJob = 1
         config.Data.splitting = 'FileBased'
         config.Data.inputDBS = "phys03" if self.sample["dataset"].endswith("/USER") else "global"
+        config.section_('User')
         config.section_('Site')
         config.Site.storageSite = 'T2_US_UCSD'
         self.misc["crab_config"] = config
-
     
     def make_pset(self):
         if not os.path.isdir(self.misc["pfx_pset"]): os.makedirs(self.misc["pfx_pset"])

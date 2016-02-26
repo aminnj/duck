@@ -38,7 +38,7 @@ def read_samples(filename="instructions.txt"):
     with open(filename, "r") as fhin:
         for line in fhin.readlines():
             if len(line) < 5: continue
-            parts = line.split()
+            parts = line.strip().split()
             if len(parts) < 5: continue
             dataset, gtag, xsec, kfact, efact = parts[:5]
             sample = { "dataset": dataset, "gtag": gtag, "kfact": float(kfact), "efact": float(efact), "xsec": float(xsec) }
