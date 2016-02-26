@@ -6,16 +6,21 @@ $(function() {
 
 
 var maxElems = 5;
-function addToTicker(text) {
+function addToTicker(text, delay) {
     var nElems = $("#ticker > span").length;
     if(nElems > maxElems) {
-        console.log(nElems);
+        // console.log(nElems);
         for(var i = nElems; i > maxElems; i--) { 
             if(nElems == maxElems + 1) $("#ticker").find(":first-child").slideUp('fast',function(){ $(this).remove(); }) ;
             else $("#ticker").find(":first-child").remove();
         }
     }
-    $("<span style='display:block'>"+text+"</span>").hide().appendTo("#ticker").fadeIn(500);
+    // console.log("here: "+text + " " + nElems);
+    if(delay) {
+        $("<span style='display:block'>"+text+"</span>").hide().appendTo("#ticker").fadeIn(200);
+    } else {
+        $("<span style='display:block'>"+text+"</span>").appendTo("#ticker");
+    }
 }
 
 
@@ -27,6 +32,7 @@ setInterval(function() {
             if (ajax.responseText != previous) {
                 nPrevious = previous.split("\n").length;
                 newText = ajax.responseText;
+                previous = ajax.responseText;
                 newLines = newText.split("\n");
                 if(newLines.length < nPrevious) return;
 
@@ -37,26 +43,30 @@ setInterval(function() {
                 if(previous != "") {
                     var anim = newLines.length == 1;
                     for(var iline = 0; iline < newLines.length; iline++) {
+
+
+                        // console.log(newLines[iline]);
+                        addToTicker( newLines[iline], iline == newLines.length-1 );
+
                         // $("#ticker > ul").find(":first-child").remove();
                         // $("#ticker > ul").append("<li class='tickerItem'>" + newLines[iline] + "</li>");
                         // $("#ticker").vTicker('next', {animate: iline==newLines.length-1});
                     }
                 }
 
-                previous = ajax.responseText;
             }
         }
     };
     ajax.open("POST", "test.txt", true); //Use POST to avoid caching
     ajax.send();
-}, 3000);
+}, 100000);
 
 var detailsVisible = false;
 
 function init() {
     // $.getJSON("http://uaf-6.t2.ucsd.edu/~namin/dump/test.json", function(data) { parseJson(data); });
     // WOW CAN PUT EXTERNAL URLS HERE MAN!
-    $.getJSON("data.json", function(data) { parseJson(data); });
+    $.getJSON("data_old.json", function(data) { parseJson(data); });
 }
 
 

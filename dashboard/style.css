@@ -70,6 +70,12 @@ body {
 .boolean { color: blue; }
 .null { color: magenta; }
 .key { color: red; }
+.tickerItem { 
+    font-family: monospace;
+}
+.tickerItemDate { color:blue }
+.tickerItemPfx { color:red }
+.tickerItemText { color:black }
 pre {
     font-size: 80%;
     white-space: pre-wrap;

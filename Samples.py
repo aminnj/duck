@@ -18,7 +18,7 @@ import utils as u
 
 class Sample:
 
-    def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, xsec=None, sparms=[], debug=True):
+    def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, xsec=None, sparms=[], debug=True, logger_callback=None):
 
         setConsoleLogLevel(LOGLEVEL_MUTE)
 
@@ -85,6 +85,7 @@ class Sample:
         self.sample["crab"]["datetime"] = None # "160220_151313" from crab request name
         self.sample["crab"]["resubmissions"] = 0 # number of times we've "successfully" resubmitted a crab job
 
+        self.logger_callback = None
 
         self.crab_status_res = { }
 
@@ -131,11 +132,13 @@ class Sample:
     def get_status(self):
         return self.sample["status"]
 
+    def add_logger_callback(self, logger_callback):
+        self.logger_callback = logger_callback
 
     def do_log(self, text):
         print "[%s] [%s] %s" % (datetime.datetime.now().strftime("%H:%M:%S"), self.pfx, text)
-
-
+        if self.logger_callback is not None:
+            self.logger_callback(datetime.datetime.now().strftime("%H:%M:%S"), self.pfx, text)
 
     def save(self):
         backup_file = self.sample["crab"]["taskdir"]+"/backup.pkl"
@@ -144,7 +147,7 @@ class Sample:
         with open(backup_file,"w") as fhout:
             pickle.dump(d_tot, fhout)
         # self.do_log("successfully backed up to %s" % backup_file)
-        self.do_log("successfully backed up")
+        # self.do_log("successfully backed up")
 
     def load(self):
         backup_file = self.sample["crab"]["taskdir"]+"/backup.pkl"
