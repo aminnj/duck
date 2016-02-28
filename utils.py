@@ -29,14 +29,15 @@ def copy_jecs():
         if not os.path.isfile(jec):
             os.system("cp /nfs-7/userdata/JECs/%s ." % jec)
 
-web_dir = "~/public_html/duck/"
+web_dir = "%s/public_html/duck/" % os.getenv("HOME")
 def make_dashboard():
     if not os.path.isdir(web_dir): os.makedirs(web_dir)
-    cmd("cp -rp dashboard/* %s" % web_dir)
+    cmd("cp -rp dashboard/* %s/" % web_dir)
+    print "Monitoring page: http://uaf-6.t2.ucsd.edu/~%s/%s" % (os.getenv("USER"), web_dir.split("public_html/")[1])
 
 def copy_json():
     # cmd("cp data.json ~/public_html/autotupletest/")
-    cmd("cp data.json %s" % web_dir)
+    cmd("cp data.json %s/" % web_dir)
 
 def read_samples(filename="instructions.txt"):
     samples = []
@@ -47,7 +48,6 @@ def read_samples(filename="instructions.txt"):
             if len(parts) < 5: continue
             dataset, gtag, xsec, kfact, efact = parts[:5]
             sample = { "dataset": dataset, "gtag": gtag, "kfact": float(kfact), "efact": float(efact), "xsec": float(xsec) }
-            # if len(parts) == 6 and 
             if len(parts) == 6: sample["sparms"] = parts[5].split(",")
             samples.append(sample)
     return samples
@@ -97,7 +97,8 @@ if __name__=='__main__':
 
     # print dataset_event_count('/DYJetsToLL_M-50_Zpt-150toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15DR74-Asympt25ns_MCRUN2_74_V9-v1/MINIAODSIM')
 
-    for samp in read_samples():
-        print samp
+    # for samp in read_samples():
+    #     print samp
     
+    make_dashboard()
 
