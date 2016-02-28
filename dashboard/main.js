@@ -5,68 +5,69 @@ $(function() {
 });
 
 
-var maxElems = 5;
-function addToTicker(text, delay) {
-    var nElems = $("#ticker > span").length;
-    if(nElems > maxElems) {
-        // console.log(nElems);
-        for(var i = nElems; i > maxElems; i--) { 
-            if(nElems == maxElems + 1) $("#ticker").find(":first-child").slideUp('fast',function(){ $(this).remove(); }) ;
-            else $("#ticker").find(":first-child").remove();
-        }
-    }
-    // console.log("here: "+text + " " + nElems);
-    if(delay) {
-        $("<span style='display:block'>"+text+"</span>").hide().appendTo("#ticker").fadeIn(200);
-    } else {
-        $("<span style='display:block'>"+text+"</span>").appendTo("#ticker");
-    }
-}
+// var maxElems = 5;
+// function addToTicker(text, delay) {
+//     var nElems = $("#ticker > span").length;
+//     if(nElems > maxElems) {
+//         // console.log(nElems);
+//         for(var i = nElems; i > maxElems; i--) { 
+//             if(nElems == maxElems + 1) $("#ticker").find(":first-child").slideUp('fast',function(){ $(this).remove(); }) ;
+//             else $("#ticker").find(":first-child").remove();
+//         }
+//     }
+//     // console.log("here: "+text + " " + nElems);
+//     if(delay) {
+//         $("<span style='display:block'>"+text+"</span>").hide().appendTo("#ticker").fadeIn(200);
+//     } else {
+//         $("<span style='display:block'>"+text+"</span>").appendTo("#ticker");
+//     }
+// }
 
 
-var previous = "";
-setInterval(function() {
-    var ajax = new XMLHttpRequest();
-    ajax.onreadystatechange = function() {
-        if (ajax.readyState == 4) {
-            if (ajax.responseText != previous) {
-                nPrevious = previous.split("\n").length;
-                newText = ajax.responseText;
-                previous = ajax.responseText;
-                newLines = newText.split("\n");
-                if(newLines.length < nPrevious) return;
+// var previous = "";
+// setInterval(function() {
+//     var ajax = new XMLHttpRequest();
+//     ajax.onreadystatechange = function() {
+//         if (ajax.readyState == 4) {
+//             if (ajax.responseText != previous) {
+//                 nPrevious = previous.split("\n").length;
+//                 newText = ajax.responseText;
+//                 previous = ajax.responseText;
+//                 newLines = newText.split("\n");
+//                 if(newLines.length < nPrevious) return;
 
-                newLines = newLines.slice(nPrevious-1);
-                // remove empty strings from array
-                newLines = newLines.filter(Boolean);
+//                 newLines = newLines.slice(nPrevious-1);
+//                 // remove empty strings from array
+//                 newLines = newLines.filter(Boolean);
                 
-                if(previous != "") {
-                    var anim = newLines.length == 1;
-                    for(var iline = 0; iline < newLines.length; iline++) {
+//                 if(previous != "") {
+//                     var anim = newLines.length == 1;
+//                     for(var iline = 0; iline < newLines.length; iline++) {
 
 
-                        // console.log(newLines[iline]);
-                        addToTicker( newLines[iline], iline == newLines.length-1 );
+//                         // console.log(newLines[iline]);
+//                         addToTicker( newLines[iline], iline == newLines.length-1 );
 
-                        // $("#ticker > ul").find(":first-child").remove();
-                        // $("#ticker > ul").append("<li class='tickerItem'>" + newLines[iline] + "</li>");
-                        // $("#ticker").vTicker('next', {animate: iline==newLines.length-1});
-                    }
-                }
+//                         // $("#ticker > ul").find(":first-child").remove();
+//                         // $("#ticker > ul").append("<li class='tickerItem'>" + newLines[iline] + "</li>");
+//                         // $("#ticker").vTicker('next', {animate: iline==newLines.length-1});
+//                     }
+//                 }
 
-            }
-        }
-    };
-    ajax.open("POST", "test.txt", true); //Use POST to avoid caching
-    ajax.send();
-}, 100000);
+//             }
+//         }
+//     };
+//     ajax.open("POST", "test.txt", true); //Use POST to avoid caching
+//     ajax.send();
+// }, 100000);
 
 var detailsVisible = false;
 
 function init() {
     // $.getJSON("http://uaf-6.t2.ucsd.edu/~namin/dump/test.json", function(data) { parseJson(data); });
     // WOW CAN PUT EXTERNAL URLS HERE MAN!
-    $.getJSON("data_old.json", function(data) { parseJson(data); });
+    // $.getJSON("data_old.json", function(data) { parseJson(data); });
+    $.getJSON("data.json", function(data) { parseJson(data); });
 }
 
 
@@ -102,7 +103,7 @@ function getProgress(sample) {
             done = sample["crab"]["breakdown"]["finished"];
             tot = sample["crab"]["njobs"];
         }
-        return 5.0 + 40.0*(done/tot);
+        return 5.0 + 50.0*(done/tot);
 
     } else if (stat == "postprocessing") {
 
@@ -110,7 +111,7 @@ function getProgress(sample) {
             done = sample["postprocessing"]["done"];
             tot = sample["postprocessing"]["total"];
         }
-        return 55.0 + 35.0*(done/tot);
+        return 65.0 + 33.0*(done/tot);
 
     } else if (stat == "done") return 100.0;
     else return -1.0;
@@ -151,7 +152,7 @@ function parseJson(data) {
         var sample = data["samples"][i];
         var container = $("#section_1");
         container.append("<br>");
-        container.append("<a href='#/' class='thick' onClick=\"$('#details_"+i+"').slideToggle(150)\">"+sample["dataset"]+"</a>");
+        container.append("<a href='#/' class='thick' onClick=\"$('#details_"+i+"').slideToggle(100)\">"+sample["dataset"]+"</a>");
 
         container.append("<div class='pbar' id='pbar_"+i+"'><span id='pbartext_"+i+"' class='pbartext'></span></div>");
 
@@ -194,10 +195,10 @@ function expandAll() {
     // do it this way because one guy may be reversed
     if(detailsVisible) {
         $("#toggle_all").text("show details")
-        $("[id^=details_]").slideUp(150);
+        $("[id^=details_]").slideUp(100);
     } else {
         $("#toggle_all").text("hide details")
-        $("[id^=details_]").slideDown(150);
+        $("[id^=details_]").slideDown(100);
     }
     detailsVisible = !detailsVisible;
 }

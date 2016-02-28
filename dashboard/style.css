@@ -52,13 +52,13 @@ body {
     padding: 20px 10px 20px 10px;
     border-bottom: 2px solid #000;
 }
-#ticker {
-    padding: 0px 10px 0px 10px;
-    border-bottom: 2px solid #000;
-    /* min-height: 130px; */
-    height: 155px;
-    display:block;
-}
+/* #ticker { */
+/*     padding: 0px 10px 0px 10px; */
+/*     border-bottom: 2px solid #000; */
+/*     /1* min-height: 130px; *1/ */
+/*     height: 155px; */
+/*     display:block; */
+/* } */
 .thin { font-weight: 300; }
 .thick { font-weight: 900; }
 .alert { font-weight: 900; color: #FF3333; }
@@ -85,6 +85,9 @@ pre {
 }
 .lastUpdated {
     float:right;
+}
+html{
+    overflow-y: scroll;
 }
 
 /* LINKS */
