@@ -29,9 +29,14 @@ def copy_jecs():
         if not os.path.isfile(jec):
             os.system("cp /nfs-7/userdata/JECs/%s ." % jec)
 
+web_dir = "~/public_html/duck/"
+def make_dashboard():
+    if not os.path.isdir(web_dir): os.makedirs(web_dir)
+    cmd("cp -rp dashboard/* %s" % web_dir)
+
 def copy_json():
-    # todo: change directory and make it if it doesn't exist
-    cmd("cp data.json ~/public_html/autotupletest/")
+    # cmd("cp data.json ~/public_html/autotupletest/")
+    cmd("cp data.json %s" % web_dir)
 
 def read_samples(filename="instructions.txt"):
     samples = []
