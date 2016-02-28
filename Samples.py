@@ -160,7 +160,8 @@ class Sample:
             last_saved = self.misc["last_saved"]
             if last_saved:
                 min_ago = round((u.get_timestamp() - last_saved) / 60.0)
-                self.do_log("successfully loaded %s which was last saved %i minutes ago" % (backup_file, min_ago))
+                # self.do_log("successfully loaded %s which was last saved %i minutes ago" % (backup_file, min_ago))
+                self.do_log("successfully loaded backup (last saved %i minutes ago)" % min_ago)
             else:
                 self.do_log("successfully loaded %s" % (backup_file))
 
@@ -177,7 +178,7 @@ class Sample:
 
         # figure out specialdir automatically
         if "50ns" in ds: self.sample["specialdir"] = "run2_50ns"
-        elif "RunIISpring15MiniAODv2" in ds: self.sample["specialdir"] = "run2_fastsim"
+        elif "RunIISpring15MiniAODv2-FastAsympt25ns" in ds: self.sample["specialdir"] = "run2_fastsim"
         elif "RunIISpring15FSPremix" in ds: self.sample["specialdir"] = "run2_fastsim"
         elif "RunIISpring15MiniAODv2" in ds: self.sample["specialdir"] = "run2_25ns_MiniAODv2"
         elif "25ns" in ds: self.sample["specialdir"] = "run2_25ns"
@@ -300,7 +301,19 @@ class Sample:
             else:
                 if not self.misc["crab_config"]: self.make_crab_config()
                 self.make_pset()
-                out = crabCommand('submit', config = self.misc["crab_config"], proxy=u.get_proxy_file())
+                # # out = crabCommand('submit', config = self.misc["crab_config"], proxy=u.get_proxy_file())
+                # gotta do this BS instead of the above because stupid crab didn't fix their issue
+                # https://hypernews.cern.ch/HyperNews/CMS/get/computing-tools/1191/1/1/1.html
+                from multiprocessing import Queue, Process
+                q = Queue()
+                def submit(q,config,proxy):
+                    out = crabCommand('submit', config=config, proxy=proxy)
+                    q.put(out)
+                p = Process(target=submit, args=(q, self.misc["crab_config"], u.get_proxy_file()))
+                p.start()
+                p.join()
+                out = q.get()
+
 
             datetime = out["uniquerequestname"].split(":")[0]
             self.sample["crab"]["uniquerequestname"] = out["uniquerequestname"]
@@ -577,6 +590,8 @@ class Sample:
         nevents = sum([x[0] for x in nevents_both])
         nevents_effective = sum([x[1] for x in nevents_both])
 
+        if not os.path.isdir(std_log_files): os.makedirs(std_log_files)
+
         condor_params = {
                 "exe": executable_script,
                 "inpfiles": input_files,
@@ -605,7 +620,9 @@ class Sample:
         # don't resubmit the ones that are already running or done
         imerged_set = set(self.sample['imerged_to_ijob'].keys())
         processing_set = self.get_condor_running()
-        done_set = self.get_merged_done()
+        # subtract running jobs from done. we might think they're done if they begin
+        # to stageout, but they're not yet done staging out
+        done_set = self.get_merged_done() - processing_set
         imerged_list = list( imerged_set - processing_set - done_set ) 
 
         self.sample["postprocessing"]["total"] = len(imerged_set)
@@ -679,6 +696,7 @@ class Sample:
         else:
             output_dir = self.sample["crab"]["outputdir"]
             cmd = """( cd scripts; root -n -b -q -l "checkCMS3.C(\\"{0}/merged\\", \\"{0}\\", 0,0)"; )""".format(output_dir)
+            # print cmd
             self.do_log("started running checkCMS3")
             out = u.get(cmd)
             self.do_log("finished running checkCMS3")
@@ -696,8 +714,13 @@ class Sample:
                 if "ERROR!" in line: problems.append(line.replace("ERROR!","").strip())
                 elif "Total problems found:" in line: tot_problems = int(line.split(":")[1].strip())
 
+        self.do_log("found %i total problems:" % tot_problems)
+        for prob in problems:
+            self.do_log("-- %s" % prob)
+
         self.sample["checks"]["nproblems"] = tot_problems
         self.sample["checks"]["problems"] = problems
+
         return tot_problems == 0
 
 if __name__=='__main__':
