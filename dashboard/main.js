@@ -113,7 +113,7 @@ function getProgress(sample) {
         }
         return 65.0 + 33.0*(done/tot);
 
-    } else if (stat == "done") return 100.0;
+    } else if (stat == "done") return 100;
     else return -1.0;
 
 }
@@ -153,21 +153,37 @@ function parseJson(data) {
         var container = $("#section_1");
         container.append("<br>");
         container.append("<a href='#/' class='thick' onClick=\"$('#details_"+i+"').slideToggle(100)\">"+sample["dataset"]+"</a>");
-
+        // if(sample["status"] == "done") {
+        //     container.append("<br>#events in: " + sample["nevents_unmerged"]);
+        //     container.append("<br>#events out: " + sample["nevents_merged"]);
+        //     container.append("<br>location: " + sample["finaldir"]);
+        // } else {
         container.append("<div class='pbar' id='pbar_"+i+"'><span id='pbartext_"+i+"' class='pbartext'></span></div>");
+        // container.append("<div class='afterpbar' id='after_pbar_"+i+"'></div>");
+        // }
 
         // FIXME, display:none
         container.append("<div id='details_"+i+"' style='display:none;'></div>");
         // container.append("<div id='details_"+i+"' class='details' ></div>");
+        //
+        
+        // if(sample["status"] == "done") {
+        //     $( "#after_pbar_"+i ).append("in: " + sample["nevents_unmerged"] + ", out: " + sample["nevents_unmerged"]);
+        // }
 
         $( "#pbar_"+i ).progressbar({max: 100});
 
         var pct = Math.round(getProgress(sample));
 
-        var color = 'hsl(' + pct*1.2 + ', 70%, 50%)';
+        var color = 'hsl(' + pct*0.8 + ', 70%, 50%)';
+        // different color if completely done
+        if(pct == 100) {
+            color = 'hsl(' + pct*1.2 + ', 70%, 50%)';
+        }
+
         $("#pbar_"+i).progressbar("option","value",pct);
         $("#pbar_"+i).find(".ui-progressbar-value").css({"background": color});
-        $("#pbartext_"+i).text(sample["status"] + " [" + pct + "%]");
+        $("#pbartext_"+i).append(sample["status"] + " [" + pct + "%]");
 
         var jsStr = syntaxHighlight(JSON.stringify(sample, undefined, 4));
 
@@ -178,9 +194,13 @@ function parseJson(data) {
             jsStr = jsStr.replace("\"crab\":", " <a href='"+link+"' style='text-decoration: underline'>crab</a>: ");
         }
         
-        // bold the output directory if it's done
+        // bold the output directory and event counts if it's done
         if(("finaldir" in sample) && (sample["status"] == "done")) {
-            jsStr = jsStr.replace("\"finaldir\":</span> <span class=\"string\">", "\"finaldir\":</span> <span class=\"boldString\">");
+            jsStr = jsStr.replace("\"finaldir\":</span> <span class=\"string\">", "\"finaldir\":</span> <span class=\"string bold\">");
+
+            jsStr = jsStr.replace("\"nevents_DAS\":</span> <span class=\"number\">", "\"nevents_DAS\":</span> <span class=\"number bold\">");
+            jsStr = jsStr.replace("\"nevents_unmerged\":</span> <span class=\"number\">", "\"nevents_unmerged\":</span> <span class=\"number bold\">");
+            jsStr = jsStr.replace("\"nevents_merged\":</span> <span class=\"number\">", "\"nevents_merged\":</span> <span class=\"number bold\">");
         }
 
         // turn dataset into a link to DAS

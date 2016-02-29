@@ -95,6 +95,7 @@ if __name__=='__main__':
     # else:
     #     print "Proxy looks good"
 
+    print dataset_event_count('/SMS-T5ttcc_mGl-1425to1525_mLSP-1275to1375_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15MiniAODv2-FastAsympt25ns_74X_mcRun2_asymptotic_v2-v1/MINIAODSIM')
     # print dataset_event_count('/DYJetsToLL_M-50_Zpt-150toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15DR74-Asympt25ns_MCRUN2_74_V9-v1/MINIAODSIM')
 
     # for samp in read_samples():

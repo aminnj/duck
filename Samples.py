@@ -77,6 +77,9 @@ class Sample:
                 "ijob_to_miniaod": { }, # map from ijob to list of miniaod
                 "imerged_to_ijob": { }, # map from imerged to iunmerged
                 "ijob_to_nevents": { }, # map from ijob to (nevents, nevents_eff)
+                "nevents_DAS": 0,
+                "nevents_unmerged": 0,
+                "nevents_merged": 0,
                 }
 
         self.sample["crab"]["requestname"] = self.sample["shortname"][:99] # damn crab has size limit for name
@@ -155,7 +158,8 @@ class Sample:
             with open(backup_file,"r") as fhin:
                 d_tot = pickle.load(fhin)
 
-            self.sample = d_tot["sample"].copy()
+            for key in d_tot["sample"].keys():
+                self.sample[key] = d_tot["sample"][key]
             self.misc = d_tot["misc"].copy()
             last_saved = self.misc["last_saved"]
             if last_saved:
@@ -294,6 +298,9 @@ class Sample:
             self.do_log("already submitted crab jobs")
             self.sample["status"] = "crab"
             return 1
+
+        try: self.sample["nevents_DAS"] = u.dataset_event_count(ds)["nevents"]
+        except: pass
 
         try:
             if self.fake_submission:
@@ -535,6 +542,9 @@ class Sample:
             for igp,gp in enumerate(groups):
                 self.sample["imerged_to_ijob"][igp+1] = gp
 
+            self.sample['nevents_unmerged'] = sum([x[0] for x in self.sample['ijob_to_nevents'].values()])
+            
+
 
     def get_condor_running(self):
         # return set of merged indices
@@ -720,6 +730,7 @@ class Sample:
 
         self.sample["checks"]["nproblems"] = tot_problems
         self.sample["checks"]["problems"] = problems
+        self.sample['nevents_merged'] = self.sample['nevents_unmerged'] if tot_problems == 0 else 0
 
         return tot_problems == 0
 
