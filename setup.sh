@@ -39,5 +39,9 @@ source /cvmfs/cms.cern.ch/crab3/crab.sh
 
 cd $BASEDIR
 
+if [ ! -e ~/public_html/.htaccess ]; then
+    cp dashboard/htaccess ~/public_html/.htaccess
+    chmod 755 ~/public_html/.htaccess
+fi
 export DASHBOARD=$(python -c "import utils; utils.make_dashboard()" | grep "Monitoring page" | cut -d ' ' -f3)
 echo "[setup] dashboard is at: $DASHBOARD"

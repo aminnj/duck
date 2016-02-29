@@ -18,7 +18,7 @@ import utils as u
 
 class Sample:
 
-    def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, xsec=None, sparms=[], debug=True, logger_callback=None):
+    def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, xsec=None, sparms=[], debug=True, logger_callback=None, specialdir_test = True):
 
         setConsoleLogLevel(LOGLEVEL_MUTE)
 
@@ -32,7 +32,6 @@ class Sample:
             self.fake_merge_lists = True
             self.fake_check = True
             self.fake_copy = True
-            self.specialdir_test = True
         else:
             self.fake_submission = False
             self.fake_status = False
@@ -42,7 +41,8 @@ class Sample:
             self.fake_merge_lists = False
             self.fake_check = False
             self.fake_copy = False
-            self.specialdir_test = True
+
+        self.specialdir_test = specialdir_test
 
         # dirs are wrt the base directory where this script is located
 
@@ -168,6 +168,8 @@ class Sample:
                 self.do_log("successfully loaded backup (last saved %i minutes ago)" % min_ago)
             else:
                 self.do_log("successfully loaded %s" % (backup_file))
+        else:
+            self.do_log("can't load. probably a new sample.")
 
 
     def set_sample_specifics(self):

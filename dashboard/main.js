@@ -1,6 +1,26 @@
 // initializations
+var alldata;
 $(function() {
   init();
+
+  $( "#selectPage" ).change(function() {
+        if($(this).find(":selected").text()=="Other") {
+            $("#otherPage").show();
+        } else {
+            $("#otherPage").hide();
+        }
+  });
+
+
+  $('.submitButton').click(function (e) {
+    if (e.target) {
+        if(e.target.value == "fetch" || e.target.value == "update") {
+            doTwiki(e.target.value);
+            // console.log(alldata["samples"]);
+        }
+    }
+  });
+
 
 });
 
@@ -9,10 +29,20 @@ $.ajaxSetup({
    timeout: 5000,
 });
 
-function fetchTwiki() {
+function doTwiki(type) {
     $("#twikiTextarea").text("Fetching...");
     var formObj = {};
-    formObj["action"] = "fetch";
+    formObj["action"] = type;
+    if(type == "update") {
+        var donesamples = [];
+        for(var i = 0; i < alldata["samples"].length; i++) {
+            donesamples.push( alldata["samples"][i] );
+        }
+        console.log(donesamples);
+        // formObj["samples"] = JSON.stringify(["test"]);
+        formObj["samples"] = JSON.stringify(donesamples);
+        // formObj["samples"] = donesamples;
+    }
     var inputs = $("#fetchTwikiForm").serializeArray();
     $.each(inputs, function (i, input) {
         formObj[input.name] = input.value;
@@ -170,6 +200,8 @@ function syntaxHighlight(json) {
 
 
 function parseJson(data) {
+
+    alldata = data;
 
     var date = new Date(data["last_updated"]*1000); // ms to s
     var hours = date.getHours();

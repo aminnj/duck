@@ -16,7 +16,8 @@ if len(sys.argv) > 1:
 all_samples = []
 
 for samp in u.read_samples(instructions):
-    samp["debug"] = False
+    samp["debug"] = False # this is the real deal
+    samp["specialdir_test"] = False # this is the real deal, put it in the right snt dir
     s = Samples.Sample(**samp) 
     all_samples.append(s)
 

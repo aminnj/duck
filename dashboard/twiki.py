@@ -18,11 +18,15 @@ def get_browser(page, username):
     br = mechanize.Browser()
     br.addheaders = [('User-agent', 'Firefox')]
     br.set_handle_robots( False )
-    br.open(BASE_URL+page)
-    br.select_form(nr=0)
-    br.form['username'] = username
-    br.form['password'] = password
-    br.submit()
+    try:
+        br.open(BASE_URL+page)
+        br.select_form(nr=0)
+        br.form['username'] = username
+        br.form['password'] = password
+        br.submit()
+    except:
+        print "Can't open %s" % (BASE_URL+page)
+        sys.exit()
     return br
 
 def get_samples(assigned_to, username, get_unmade=True, page="Autotupletest"):
@@ -66,6 +70,7 @@ def update_samples(samples, username, page="Autotupletest"):
 
     columns = ["dataset", "filter_type", "nevents_in", "nevents_out", "xsec", "kfact", "efact", "gtag", "cms3tag", "location", "assigned", "comments"] 
     lines_out = []
+    num_updatable = 0
     for iline,line in enumerate(raw.split("\n")):
         if line.count("|") is 13 and "*Dataset*" not in line:
             line = line.strip()
@@ -73,21 +78,30 @@ def update_samples(samples, username, page="Autotupletest"):
             sample_twiki  = OrderedDict( zip(columns, parts) )
 
             for sample in samples:
+                if "status" in sample and not(sample["status"] == "done"): continue
+
                 # find matching sample (dataset, cms3tag must match), then fill in events and location
                 if sample_twiki["dataset"] == sample["dataset"] and sample_twiki["cms3tag"] == sample["cms3tag"] and sample_twiki["location"] == "":
                     sample_twiki["location"] = sample["finaldir"]
                     sample_twiki["nevents_in"] = sample["nevents_DAS"]
                     sample_twiki["nevents_out"] = sample["nevents_merged"]
                     line = "| %s |" % " | ".join(map(str,sample_twiki.values()))
-                break
+                    print "Found updatable entry for %s: %s" % (sample["cms3tag"], sample["dataset"])
+                    num_updatable += 1
+                    break
 
         lines_out.append(line)
 
     tosubmit = "\n".join(lines_out)
     # SANITY CHECK: if replacement text is less than 95% of original text, maybe we screwed up
     # if we didn't take out whitespace, adding entries would increase the size and then we could use 100%
-    if len(tosubmit) > 0.95*len(raw):
+    url = br.geturl().split("?")[0]
+    if num_updatable == 0:
+        print "Didn't find any updatable entries in %s" % url
+
+    if len(tosubmit) > 0.95*len(raw) and num_updatable > 0:
         br.form['text'] = "\n".join(lines_out)
+        print "Updated Twiki at %s" % url
         br.submit()
 
 if __name__=='__main__':
@@ -98,6 +112,7 @@ if __name__=='__main__':
               "finaldir": "final/dir/test/",
               "nevents_DAS": 312261,
               "nevents_merged": 312261,
+              "status": "done",
             }]
-    # update_samples(samples, username="namin")
-    print get_samples(assigned_to="Nick", username="namin", get_unmade=False)
+    # update_samples(samples, username="namin", page="Autotupletest")
+    print get_samples(assigned_to="Nick", username="namin", get_unmade=False, page="")
