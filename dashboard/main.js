@@ -4,6 +4,36 @@ $(function() {
 
 });
 
+$.ajaxSetup({
+   type: 'POST',
+   timeout: 5000,
+});
+
+function fetchTwiki() {
+    $("#twikiTextarea").text("Fetching...");
+    var formObj = {};
+    formObj["action"] = "fetch";
+    var inputs = $("#fetchTwikiForm").serializeArray();
+    $.each(inputs, function (i, input) {
+        formObj[input.name] = input.value;
+    });
+    console.log(formObj);
+    $.ajax({
+            url: "./handler.py",
+            type: "POST",
+            data: formObj,
+            // dataType: "json", 
+            success: function(data) {
+                    console.log(data);
+                    $("#twikiTextarea").text(data);
+                },
+            error: function(data) {
+                    $("#message").html("<span style='color:red'>Error:</span> "+data["responseText"]);
+                    console.log(data);
+                },
+       });
+}
+
 
 // var maxElems = 5;
 // function addToTicker(text, delay) {

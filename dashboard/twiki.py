@@ -4,7 +4,13 @@ import sys
 from collections import OrderedDict
 
 
-def get_browser(page, username, password_file = "%s/.twikipw" % os.getenv("HOME")):
+def get_browser(page, username):
+    user = os.path.dirname(os.path.realpath(__file__)).split("/")[3].strip()
+    password_file = "/home/users/%s/.twikipw" % user
+
+    if username.strip() == "":
+        username = user
+
     BASE_URL = "http://www.t2.ucsd.edu/tastwiki/bin/view/CMS/"
 
     with open(password_file, "r") as fhin: password = fhin.read().strip()
@@ -19,8 +25,38 @@ def get_browser(page, username, password_file = "%s/.twikipw" % os.getenv("HOME"
     br.submit()
     return br
 
-def update_samples(samples):
-    br = get_browser("Autotupletest", "namin")
+def get_samples(assigned_to, username, get_unmade=True, page="Autotupletest"):
+    br = get_browser(page, username)
+    for link in br.links():
+        if link.text.strip() == 'Raw View':
+            br.follow_link(link)
+            break
+
+    resp = br.response().read()
+    raw = resp.split("twikiTextareaRawView\">")[1].split("</textarea")[0]
+
+    samples = []
+    columns = ["dataset", "filter_type", "nevents_in", "nevents_out", "xsec", "kfact", "efact", "gtag", "cms3tag", "location", "assigned", "comments"] 
+    for iline,line in enumerate(raw.split("\n")):
+        if line.count("|") is not 13 or "*Dataset*" in line: continue
+
+        line = line.strip()
+        dataset, filter_type, nevents_in, nevents_out, xsec, kfact, efact, gtag, cms3tag, location, assigned, comments = map(lambda x: x.strip(), line.split("|")[1:-1])
+        sparms = ""
+        if "sparm" in comments:
+            sparms = comments.split("sparms:")[1].strip()
+
+        if not(assigned == assigned_to or assigned_to.lower() == "all"): continue
+
+        if get_unmade and not(location == ""): continue
+
+        samples.append( {"dataset": dataset, "gtag": gtag, "xsec": xsec, "kfact": kfact, "efact": efact, "sparms": sparms} )
+
+    return samples
+
+
+def update_samples(samples, username, page="Autotupletest"):
+    br = get_browser(page, username)
     for link in br.links():
         if link.text.strip() == 'Raw Edit':
             br.follow_link(link)
@@ -37,9 +73,8 @@ def update_samples(samples):
             sample_twiki  = OrderedDict( zip(columns, parts) )
 
             for sample in samples:
-                # find matching sample (dataset, gtag, cms3tag must match), then fill in events and location
-                if sample_twiki["dataset"] == sample["dataset"] and sample_twiki["cms3tag"] == sample["cms3tag"] \
-                  and sample_twiki["gtag"] == sample["gtag"] and sample_twiki["location"] == "":
+                # find matching sample (dataset, cms3tag must match), then fill in events and location
+                if sample_twiki["dataset"] == sample["dataset"] and sample_twiki["cms3tag"] == sample["cms3tag"] and sample_twiki["location"] == "":
                     sample_twiki["location"] = sample["finaldir"]
                     sample_twiki["nevents_in"] = sample["nevents_DAS"]
                     sample_twiki["nevents_out"] = sample["nevents_merged"]
@@ -64,4 +99,5 @@ if __name__=='__main__':
               "nevents_DAS": 312261,
               "nevents_merged": 312261,
             }]
-    update_samples(samples)
+    # update_samples(samples, username="namin")
+    print get_samples(assigned_to="Nick", username="namin", get_unmade=False)

@@ -32,6 +32,7 @@ def copy_jecs():
 web_dir = "%s/public_html/duck/" % os.getenv("HOME")
 def make_dashboard():
     if not os.path.isdir(web_dir): os.makedirs(web_dir)
+    cmd("chmod 755 -R %s" % web_dir)
     cmd("cp -rp dashboard/* %s/" % web_dir)
     print "Monitoring page: http://uaf-6.t2.ucsd.edu/~%s/%s" % (os.getenv("USER"), web_dir.split("public_html/")[1])
 

@@ -7,6 +7,7 @@ export CMS3TAG=$(python -c "import params; print params.cms3tag")
 export CMSSW_VER=$(python -c "import params; print params.cmssw_ver")
 export BASEDIR=`pwd`
 
+
 echo "[setup] Using $CMS3TAG and $CMSSW_VER for this campaign"
 
 if [ ! -d $CMSSW_VER ]; then
@@ -37,3 +38,6 @@ fi
 source /cvmfs/cms.cern.ch/crab3/crab.sh
 
 cd $BASEDIR
+
+export DASHBOARD=$(python -c "import utils; utils.make_dashboard()" | grep "Monitoring page" | cut -d ' ' -f3)
+echo "[setup] dashboard is at: $DASHBOARD"

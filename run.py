@@ -25,7 +25,6 @@ if u.proxy_hours_left() < 20:
     u.proxy_renew()
 
 u.copy_jecs()
-u.make_dashboard()
 
 data = { 
 "samples": [{} for _ in range(len(all_samples))]

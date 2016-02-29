@@ -19,7 +19,8 @@
             <span class="thin">
                 &emsp;
                 <a href="#" id="toggle_all" onClick="expandAll()">show details</a>&ensp;|&ensp;
-                <a href="#" onClick="$('#ticker').slideToggle(100)">duck</a>
+                <a href="#" onClick="$('#duck').slideToggle(100)">duck</a>&ensp;|&ensp;
+                <a href="#" onClick="$('#twiki').slideToggle(100)">twiki</a>
             </span>
         </div>
         <div id="colorstrip"></div>
@@ -27,8 +28,35 @@
         <div id="container">
 
             <span id="last_updated" class="lastUpdated"></span>
+            <!-- <div id="twiki" class="section" style='display:none;'> -->
+            <div id="twiki" class="section" >
+                Get sample information from Twiki to paste into instructions.txt.
+                <i>Only</i> need to specify username if Twiki username is different from UAF.
+                <br>
+
+
+                    <form id="fetchTwikiForm" action="javascript:void(0)" onsubmit="javascript:fetchTwiki()">
+                        <input type="text" class="inputbar" name="name" placeholder="Assigned name (e.g., Donald)" />
+                        <input type="text" class="inputbar" name="username" placeholder="Twiki username (e.g., dduck)" />
+                        <select class="inputbar" name="page">
+                            <option value="Autotupletest">Autotupletest</option>
+                            <option value="Phys14Samples">Phys14Samples</option>
+                            <option value="Run2Samples_25ns">Run2Samples_25ns</option>
+                            <option value="Run2Samples_50ns">Run2Samples_50ns</option>
+                            <option value="Run2SamplesReMINIAOD_25ns">Run2SamplesReMINIAOD_25ns</option>
+                            <option value="Run2SamplesSMSFastSim_25ns">Run2SamplesSMSFastSim_25ns</option>
+                        </select>
+                        <input type="checkbox" name="unmade" value="unmade">Only get unmade &ensp;
+                        <button type="submit" form="fetchTwikiForm" value="submit">Fetch</button>
+                    </form>
+                    <div id="message"> </div>
+
+                <textarea id="twikiTextarea" width='400px' height='200px'> </textarea>
+
+
+            </div>
+            <div id="duck" class="section" style='display:none;'> <img src="images/duck.jpg" /></div>
             <div id="section_1" class="section"                      ></div>
-            <div id="ticker" class="section" style='display:none;'> <img src="images/duck.jpg" /></div>
             <!-- <div id="ticker"> </div> -->
 
         </div>

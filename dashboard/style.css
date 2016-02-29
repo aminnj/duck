@@ -84,6 +84,7 @@ body {
 /* .tickerItemDate { color:blue } */
 /* .tickerItemPfx { color:red } */
 /* .tickerItemText { color:black } */
+
 pre {
     font-size: 80%;
     white-space: pre-wrap;
@@ -113,11 +114,12 @@ a:active {
 
 /* INPUT BOXES */
 .inputbar {
+    font-family: inherit;
     position:relative;
     top: -1px;
     margin: 5px auto;
-    width: 300px;
-    height: 40px;
+    width: 250px;
+    height: 30px;
     padding: 0 20px;
     font-size: inherit;
     /* font-size: 1.5em; */
@@ -125,18 +127,18 @@ a:active {
     outline: none;
 }
 .inputbar:focus {
-  border: 1px solid #33B333;
+  border: 1px solid #FF3333;
   transition: 0.2s ease;
-  color: #33B333;
+  color: #000;
 }
 
 /* BUTTONS */
 button {
     outline:none;
-    font-family: Lato;
+    font-family: inherit;
     -webkit-border-radius: 0;
     -moz-border-radius: 0;
-    height: 41px;
+    height: 31px;
     border-radius: 0px;
     color: #000000;
     font-size: inherit;
@@ -154,3 +156,7 @@ button:active {
     color: #FF8080; 
 }
 
+#twikiTextarea {
+    width: 1000px;
+    height: 250px;
+}

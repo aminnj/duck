@@ -59,7 +59,7 @@ class Sample:
                 "basedir" : "",
                 "dataset" : dataset,
                 "shortname": dataset.split("/")[1]+"_"+dataset.split("/")[2],
-                "user" : os.getenv("USER"),
+                "user" : os.getenv("USER"), #FIXME: for people with different hadoop mapping, only need to change this
                 "cms3tag" : params.cms3tag,
                 "gtag" : gtag,
                 "kfact" : kfact,
@@ -593,8 +593,8 @@ class Sample:
         merge_script = working_dir+"/scripts/mergeScript.C"
         addbranches_script = working_dir+"/scripts/addBranches.C"
         proxy_file = u.get("find /tmp/x509up_u* -user $USER").strip()
-        condor_log_files = "/data/tmp/%s/%s/%s.log" % (self.sample["user"],shortname,datetime.datetime.now().strftime("+%Y.%m.%d-%H.%M.%S"))
-        std_log_files = "/data/tmp/%s/%s/std_logs/" % (self.sample["user"],shortname)
+        condor_log_files = "/data/tmp/%s/%s/%s.log" % (os.getenv("USER"),shortname,datetime.datetime.now().strftime("+%Y.%m.%d-%H.%M.%S"))
+        std_log_files = "/data/tmp/%s/%s/std_logs/" % (os.getenv("USER"),shortname)
         input_files = ",".join([executable_script, merge_script, addbranches_script])
         nevents_both = self.sample['ijob_to_nevents'].values()
         nevents = sum([x[0] for x in nevents_both])
