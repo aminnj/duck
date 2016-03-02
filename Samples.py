@@ -301,7 +301,7 @@ class Sample:
             self.sample["status"] = "crab"
             return 1
 
-        try: self.sample["nevents_DAS"] = u.dataset_event_count(ds)["nevents"]
+        try: self.sample["nevents_DAS"] = u.dataset_event_count(self.sample["dataset"])["nevents"]
         except: pass
 
         try:
@@ -336,6 +336,10 @@ class Sample:
 
 
     def crab_status(self):
+
+        if self.sample["nevents_DAS"] == 0:
+            self.sample["nevents_DAS"] = u.dataset_event_count(self.sample["dataset"])["nevents"]
+
         try:
             if self.fake_status:
                 # out = {'ASOURL': 'https://cmsweb.cern.ch/couchdb2', 'collector': 'cmssrv221.fnal.gov,vocms099.cern.ch', 'failedJobdefs': 0,
@@ -445,21 +449,37 @@ class Sample:
         self.sample["crab"]["outputdir"] = "/hadoop/cms/store/user/%s/%s/crab_%s/%s/0000/" \
                 % (self.sample["user"], self.sample["dataset"].split("/")[1], self.sample["crab"]["requestname"], self.sample["crab"]["datetime"])
 
-
         if self.fake_crab_done: return True
         if "status" not in self.sample["crab"] or self.sample["crab"]["status"] != "COMPLETED": return False
 
         self.handle_more_than_1k()
 
-
         njobs = self.sample["crab"]["njobs"]
         self.misc["rootfiles"] = glob.glob(self.sample["crab"]["outputdir"] + "/*.root")
         self.misc["logfiles"] = glob.glob(self.sample["crab"]["outputdir"] + "/log/*.tar.gz")
+
+        if njobs == len(self.misc["rootfiles"]) and not(njobs == len(self.misc["logfiles"])):
+            # we have all the root files, but evidently some log files got lost. try to recover them
+            # format: ntuple_1.root and cmsRun_1.log.tar.gz
+            root_file_numbers = set([int(rfile.split("_")[-1].split(".")[0]) for rfile in self.misc["rootfiles"]])
+            log_file_numbers = set([int(lfile.split("_")[-1].split(".")[0]) for lfile in self.misc["logfiles"]])
+            log_dont_have = list(root_file_numbers - log_file_numbers)
+            if len(log_dont_have) > 0:
+                jobids = ",".join(map(str, log_dont_have))
+                self.do_log("all rootfiles exist, but not all logfiles are there (missing %s), so recovering with crab getlog --short" % jobids)
+                try: out = crabCommand('getlog', dir=self.sample["crab"]["taskdir"], short=True, proxy=u.get_proxy_file(), jobids=jobids)
+                except: pass
+                textlogs = glob.glob(self.sample["crab"]["taskdir"]+"/results/job_out*.txt") 
+                textlogs = [log for log in textlogs if int(log.split("job_out.")[1].split(".")[0]) in log_dont_have]
+                if len(textlogs) > 0:
+                    self.do_log("got %i of 'em" % len(textlogs))
+                    self.misc["logfiles"].extend(textlogs)
+
         if njobs == len(self.misc["rootfiles"]) and njobs == len(self.misc["logfiles"]):
             return True
 
-        self.do_log("ERROR: crab says COMPLETED but not all files are there")
-        self.do_log("# jobs, # root files, # log files = " % (njobs, len(self.misc["rootfiles"]), len(self.misc["logfiles"])))
+        self.do_log("ERROR: crab says COMPLETED but not all files are there, even after getlog")
+        self.do_log("# jobs, # root files, # log files = %i, %i, %i" % (njobs, len(self.misc["rootfiles"]), len(self.misc["logfiles"])))
         return False
 
 
@@ -480,16 +500,25 @@ class Sample:
         if not self.sample["ijob_to_miniaod"]:
             self.do_log("making map from unmerged number to miniaod name")
             for logfile in self.misc["logfiles"]:
-                with  tarfile.open(logfile, "r:gz") as tar:
-                    for member in tar:
-                        if "FrameworkJobReport" not in member.name: continue
-                        jobnum = int(member.name.split("-")[1].split(".xml")[0])
-                        fh = tar.extractfile(member)
-                        lines = [line for line in fh.readlines() if "<PFN>" in line and "/store/" in line]
-                        miniaod = list(set(map(lambda x: "/store/"+x.split("</PFN>")[0].split("/store/")[1], lines)))
+                if ".tar.gz" in logfile:
+                    with  tarfile.open(logfile, "r:gz") as tar:
+                        for member in tar:
+                            if "FrameworkJobReport" not in member.name: continue
+                            jobnum = int(member.name.split("-")[1].split(".xml")[0])
+                            fh = tar.extractfile(member)
+                            lines = [line for line in fh.readlines() if "<PFN>" in line and "/store/" in line]
+                            miniaod = list(set(map(lambda x: "/store/"+x.split("</PFN>")[0].split("/store/")[1], lines)))
+                            self.sample["ijob_to_miniaod"][jobnum] = miniaod
+                            fh.close()
+                            break
+                elif ".txt" in logfile:
+                    # parse the recovered txt files if .tar.gz didn't stageout
+                    with open(logfile, "r") as fh:
+                        # job_out.7.0.txt
+                        jobnum = int(logfile.split("job_out.")[1].split(".")[0])
+                        lines = [line for line in fh.readlines() if "Initiating request to open file" in line]
+                        miniaod = list(set(map(lambda x: "/store/"+x.split("/store/")[1].split(".root")[0]+".root", lines)))
                         self.sample["ijob_to_miniaod"][jobnum] = miniaod
-                        fh.close()
-                        break
 
 
     def get_rootfile_info(self, fname):
@@ -536,7 +565,7 @@ class Sample:
                 if is_bad: continue
                 tot_size += file_size
                 group.append(ijob)
-                if tot_size >= 5.0: # in GB!
+                if tot_size >= 4.5: # in GB!
                     groups.append(group)
                     group = []
                     tot_size = 0.0
@@ -676,7 +705,7 @@ class Sample:
             print >>fhout,"unmerged files are in: %s" % self.sample["crab"]["outputdir"]
             print >>fhout, ""
             for ijob in sorted(self.sample["ijob_to_miniaod"]):
-                print >>fhout, "unmerged %i %s" % (ijob, self.sample["ijob_to_miniaod"][ijob][0])
+                print >>fhout, "unmerged %i %s" % (ijob, ",".join(self.sample["ijob_to_miniaod"][ijob]))
             print >>fhout, ""
             for imerged in sorted(self.sample["imerged_to_ijob"]):
                 print >>fhout, "merged file constituents %i: %s" % (imerged, " ".join(map(str,self.sample["imerged_to_ijob"][imerged])))
