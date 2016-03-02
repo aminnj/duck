@@ -217,12 +217,13 @@ class Sample:
         config.Data.publication = False
         config.Data.inputDataset = self.sample["dataset"]
         config.Data.unitsPerJob = 1
+        config.Data.ignoreLocality = True
         config.Data.splitting = 'FileBased'
         config.Data.inputDBS = "phys03" if self.sample["dataset"].endswith("/USER") else "global"
         config.section_('User')
         config.section_('Site')
         config.Site.storageSite = 'T2_US_UCSD'
-        config.Site.whitelist = ['T2_US_Caltech','T2_US_Florida', 'T2_US_MIT', 'T2_US_Nebraska', 'T2_US_Purdue', 'T2_US_UCSD', 'T2_US_Vanderbilt', 'T2_US_Wisconsin']
+        config.Site.whitelist = ['T2_US_*']
         self.misc["crab_config"] = config
     
     def make_pset(self):
@@ -284,8 +285,8 @@ class Sample:
         os.system("rm %s/%s_cfg.py" % (self.misc["pfx_pset"], self.sample["shortname"]))
 
     def nuke(self):
-        if self.crab_kill():
-            self.crab_delete_dir()
+        self.crab_kill()
+        self.crab_delete_dir()
 
     def crab_submit(self):
         # first try to see if the job already exists naively
@@ -328,9 +329,9 @@ class Sample:
                 out = q.get()
 
 
-            datetime = out["uniquerequestname"].split(":")[0]
+            dtstr = out["uniquerequestname"].split(":")[0]
             self.sample["crab"]["uniquerequestname"] = out["uniquerequestname"]
-            self.sample["crab"]["datetime"] = datetime
+            self.sample["crab"]["datetime"] = dtstr
             self.do_log("submitted jobs. uniquerequestname: %s" % (out["uniquerequestname"]))
             self.sample["status"] = "crab"
             return 1 # succeeded
@@ -374,48 +375,60 @@ class Sample:
             self.do_log("ERROR resubmitting "+str(e))
             return 0 # failed
 
+    def minutes_since_crab_submit(self):
+        # minutes since the crab task was created
+        dtstr = self.sample["crab"]["datetime"]
+        then = datetime.datetime.strptime(dtstr, "%y%m%d_%H%M%S")
+        now = datetime.datetime.now()
+        return (then-now).seconds / 60.0
 
     def crab_parse_status(self):
         self.crab_status()
         stat = self.crab_status_res
 
-        # print stat
-
         try:
-            d_crab = {
-                "status": stat.get("status"),
-                "commonerror": None,
-                "schedd": stat.get("schedd"),
-                "njobs": len(stat["jobs"]),
-                "time": u.get_timestamp(),
-                "breakdown": {
-                    "unsubmitted": 0, "idle": 0, "running": 0, "failed": 0,
-                    "transferring": 0, "transferred": 0, "cooloff": 0, "finished": 0,
-                }
+            self.sample["crab"]["status"] = stat.get("status")
+            self.sample["crab"]["task_failure"] = stat.get("taskFailureMsg")
+            self.sample["crab"]["task_warning"] = stat.get("taskWarningMsg")
+            self.sample["crab"]["status_failure"] = stat.get("statusFailureMsg")
+            self.sample["crab"]["commonerror"] = None
+            self.sample["crab"]["time"] = u.get_timestamp()
+            self.sample["crab"]["schedd"] = stat.get("schedd")
+            self.sample["crab"]["njobs"] = len(stat["jobList"])
+            self.sample["crab"]["breakdown"] = {
+                "unsubmitted": 0, "idle": 0, "running": 0, "failed": 0,
+                "transferring": 0, "transferred": 0, "cooloff": 0, "finished": 0,
             }
         except Exception as e:
             # must be the case that not all this info exists because it was recently submitted
             self.do_log("can't get status right now (is probably too new): "+str(e))
             return
 
-        if d_crab["status"] == "FAILED":
+        if self.sample["crab"]["status"] == "FAILED":
             if self.crab_resubmit():
                 self.sample["crab"]["resubmissions"] += 1
 
+        if self.sample["crab"]["status"] == "SUBMITTED" and "taskWarningMsg" in stat:
+            warning = stat["taskWarningMsg"]
+            if len(warning) > 0 and "not yet bootstrapped" in warning[0]:
+                self.do_log("task has not bootstrapped yet, and it's been %i minutes" % self.minutes_since_crab_submit())
+
         # population of each status (running, failed, etc.)
-        for status,jobs in stat["jobsPerStatus"].items():
-            d_crab["breakdown"][status] = jobs
+        if "jobsPerStatus" in stat:
+            for status,jobs in stat["jobsPerStatus"].items():
+                self.sample["crab"]["breakdown"][status] = jobs
 
         # find most common error (if exists)
         error_codes, details = [], []
         most_common_detail = "n/a"
-        for job in stat["jobs"].values():
-            if "Error" in job.keys():
-                error_codes.append(job["Error"][0])
-                try:
-                    details.append(job["Error"][2]["details"])
-                except: 
-                    if len(job["Error"]) > 2: details.append(job["Error"][1])
+        if "jobs" in stat:
+            for job in stat["jobs"].values():
+                if "Error" in job.keys():
+                    error_codes.append(job["Error"][0])
+                    try:
+                        details.append(job["Error"][2]["details"])
+                    except: 
+                        if len(job["Error"]) > 2: details.append(job["Error"][1])
 
         
         if len(details) > 0:
@@ -425,12 +438,8 @@ class Sample:
             most_common_error_code = max(set(error_codes), key=error_codes.count)
             count = error_codes.count(most_common_error_code)
 
-            d_crab["commonerror"] = "%i jobs (%.1f%%) failed with error code %s: %s" \
-                    % (count, 100.0*count/d_crab["njobs"], most_common_error_code, most_common_detail)
-
-        # extend the crab dict with these new values we just got
-        for k in d_crab:
-            self.sample["crab"][k] = d_crab[k]
+            self.sample["crab"]["commonerror"] = "%i jobs (%.1f%%) failed with error code %s: %s" \
+                    % (count, 100.0*count/self.sample["crab"]["njobs"], most_common_error_code, most_common_detail)
 
 
     def handle_more_than_1k(self):

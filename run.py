@@ -32,6 +32,11 @@ data = {
 "samples": [{} for _ in range(len(all_samples))]
 }
 
+# for isample, s in enumerate(all_samples):
+#     s.nuke()
+# sys.exit()
+
+
 for i in range(5000):
     for isample, s in enumerate(all_samples):
         stat = s.get_status()
