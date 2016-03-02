@@ -6,10 +6,11 @@ import json
 import sys
 import os
 
-instructions = "instructions_test.txt"
+# instructions = "instructions_test.txt"
+instructions = "instructions.txt"
 if len(sys.argv) > 1:
     instructions = sys.argv[1]
-    if not os.isfile(instructions):
+    if not os.path.isfile(instructions):
         print ">>> %s does not exist" % instructions
         sys.exit()
 

@@ -11,6 +11,23 @@ $(function() {
         }
   });
 
+  var duckMode = false;
+  $( ".mainlogo" ).dblclick(function() { 
+    $( "#admin" ).slideToggle(150); 
+    if(duckMode) {
+      duckMode = false;
+      $(".mainlogo").attr('src', 'images/crab.png')
+      $("#firstTitle").text("auto");
+      $(".duckAudio").trigger('pause');
+    } else {
+      duckMode = true;
+      $(".mainlogo").attr('src', 'images/ducklogo.png')
+      $("#firstTitle").text("duck");
+      $(".duckAudio").prop("currentTime",0);
+      $(".duckAudio").trigger('play');
+    }
+  });
+
 
   $('.submitButton').click(function (e) {
     if (e.target) {
@@ -163,7 +180,7 @@ function getProgress(sample) {
             done = sample["crab"]["breakdown"]["finished"];
             tot = sample["crab"]["njobs"];
         }
-        return 5.0 + 50.0*(done/tot);
+        return 1.0 + 65.0*(done/tot);
 
     } else if (stat == "postprocessing") {
 
@@ -171,7 +188,7 @@ function getProgress(sample) {
             done = sample["postprocessing"]["done"];
             tot = sample["postprocessing"]["total"];
         }
-        return 65.0 + 33.0*(done/tot);
+        return 68.0 + 30.0*(done/tot);
 
     } else if (stat == "done") return 100;
     else return -1.0;

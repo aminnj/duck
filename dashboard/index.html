@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+    <meta http-equiv="refresh" content="600">
     <head>
         <title>Monitoring</title>
         <link rel="icon" type="image/png" sizes="96x96" href="images/favicon.png">
@@ -13,13 +14,17 @@
 
     <body>
 
+        <audio class="duckAudio" controls preload="none" style='display:none;'>
+            <source src="images/ducktales.mp3" type="audio/mpeg">
+        </audio>
+
         <div id="topBar">
             <img class="mainlogo" src="images/crab.png" />
-            <span class="thin">auto</span>Tupler
+            <span id="firstTitle" class="thin">auto</span>Tupler
             <span class="thin">
                 &emsp;
                 <a href="#" id="toggle_all" onClick="expandAll()">show details</a>&ensp;|&ensp;
-                <a href="#" onClick="$('#duck').slideToggle(100)">duck</a>&ensp;|&ensp;
+                <!-- <a href="#" onClick="$('#duck').slideToggle(100)">duck</a>&ensp;|&ensp; -->
                 <a href="#" onClick="$('#twiki').slideToggle(100)">twiki</a>
             </span>
         </div>
@@ -61,7 +66,7 @@
 
 
             </div>
-            <div id="duck" class="section" style='display:none;'> <img src="images/duck.jpg" />QUACK!</div>
+            <!-- <div id="duck" class="section" style='display:none;'> <img src="images/duck.jpg" />QUACK!</div> -->
             <div id="section_1" class="section"                      ></div>
             <!-- <div id="ticker"> </div> -->
 
