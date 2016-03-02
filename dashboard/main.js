@@ -16,12 +16,14 @@ $(function() {
     $( "#admin" ).slideToggle(150); 
     if(duckMode) {
       duckMode = false;
-      $(".mainlogo").attr('src', 'images/crab.png')
+      $(".mainlogo").attr('src', 'images/crab.png');
+      $("#container").css("background", "");
       $("#firstTitle").text("auto");
       $(".duckAudio").trigger('pause');
     } else {
       duckMode = true;
-      $(".mainlogo").attr('src', 'images/ducklogo.png')
+      $(".mainlogo").attr('src', 'images/ducklogo.png');
+      $("#container").css("background", "url(images/ducklogo.png");
       $("#firstTitle").text("duck");
       $(".duckAudio").prop("currentTime",0);
       $(".duckAudio").trigger('play');
