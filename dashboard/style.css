@@ -4,11 +4,11 @@
 /* TOP BAR */
 #topBar {
     width: 100%;
-    font-size: 2em;
+    font-size: 1.5em;
     padding: 0px 10px 10px 10px;
     vertical-align: middle;
     font-weight: bold;
-    line-height: 65px;
+    line-height: 55px;
     z-index: -1;
     background-color: #eee; 
     white-space: nowrap;
@@ -28,28 +28,21 @@
 body {
     padding: 0px;
     margin: 0px;
-    font-size: large;
+    font-size: 1em;
     font-family: Open Sans;
 }
 .pbar{
-    /* display: inline-block; */
     margin-top:10px;
     margin-bottom:10px;
     width: 600px;
     height: 30px;
 }
-/* .afterpbar{ */
-/*     position:relative; */
-/*     /1* display: inline-block; *1/ */
-/*     /1* outline: 1px solid #bbb; *1/ */
-/*     top:-20px; */
-/*     left:10px; */
-/* } */
+
 .pbartext{
     /* position: relative; */
     float: right;
-    margin-right:10px;
-    margin-top:1px;
+    margin-right:5px;
+    margin-top:3px;
 }
 #container {
     padding: 10px 10px 10px 10px;
@@ -57,16 +50,10 @@ body {
 
 /* VARIOUS SECTIONS */
 .section {
-    padding: 20px 10px 20px 10px;
+    padding: 10px 10px 10px 10px;
     border-bottom: 2px solid #000;
 }
-/* #ticker { */
-/*     padding: 0px 10px 0px 10px; */
-/*     border-bottom: 2px solid #000; */
-/*     /1* min-height: 130px; *1/ */
-/*     height: 155px; */
-/*     display:block; */
-/* } */
+
 .thin { font-weight: 300; }
 .thick { font-weight: 900; }
 .alert { font-weight: 900; color: #FF3333; }
@@ -78,15 +65,9 @@ body {
 .boolean { color: blue; }
 .null { color: magenta; }
 .key { color: red; }
-/* .tickerItem { */ 
-/*     font-family: monospace; */
-/* } */
-/* .tickerItemDate { color:blue } */
-/* .tickerItemPfx { color:red } */
-/* .tickerItemText { color:black } */
 
 pre {
-    font-size: 80%;
+    font-size: 90%;
     white-space: pre-wrap;
     outline: 1px solid #bbb;
     padding: 5px;
@@ -110,7 +91,6 @@ a:hover {
 a:active {
     color: #FF8080; 
 }
-
 
 /* INPUT BOXES */
 .inputbar {
@@ -142,7 +122,6 @@ button {
     border-radius: 0px;
     color: #000000;
     font-size: inherit;
-    /* font-size: large; */
     background: #f0f0f0;
     padding: 3px 15px 3px 15px;
     margin: auto 15px auto auto;

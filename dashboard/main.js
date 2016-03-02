@@ -83,63 +83,6 @@ function doTwiki(type) {
        });
 }
 
-
-// var maxElems = 5;
-// function addToTicker(text, delay) {
-//     var nElems = $("#ticker > span").length;
-//     if(nElems > maxElems) {
-//         // console.log(nElems);
-//         for(var i = nElems; i > maxElems; i--) { 
-//             if(nElems == maxElems + 1) $("#ticker").find(":first-child").slideUp('fast',function(){ $(this).remove(); }) ;
-//             else $("#ticker").find(":first-child").remove();
-//         }
-//     }
-//     // console.log("here: "+text + " " + nElems);
-//     if(delay) {
-//         $("<span style='display:block'>"+text+"</span>").hide().appendTo("#ticker").fadeIn(200);
-//     } else {
-//         $("<span style='display:block'>"+text+"</span>").appendTo("#ticker");
-//     }
-// }
-
-
-// var previous = "";
-// setInterval(function() {
-//     var ajax = new XMLHttpRequest();
-//     ajax.onreadystatechange = function() {
-//         if (ajax.readyState == 4) {
-//             if (ajax.responseText != previous) {
-//                 nPrevious = previous.split("\n").length;
-//                 newText = ajax.responseText;
-//                 previous = ajax.responseText;
-//                 newLines = newText.split("\n");
-//                 if(newLines.length < nPrevious) return;
-
-//                 newLines = newLines.slice(nPrevious-1);
-//                 // remove empty strings from array
-//                 newLines = newLines.filter(Boolean);
-                
-//                 if(previous != "") {
-//                     var anim = newLines.length == 1;
-//                     for(var iline = 0; iline < newLines.length; iline++) {
-
-
-//                         // console.log(newLines[iline]);
-//                         addToTicker( newLines[iline], iline == newLines.length-1 );
-
-//                         // $("#ticker > ul").find(":first-child").remove();
-//                         // $("#ticker > ul").append("<li class='tickerItem'>" + newLines[iline] + "</li>");
-//                         // $("#ticker").vTicker('next', {animate: iline==newLines.length-1});
-//                     }
-//                 }
-
-//             }
-//         }
-//     };
-//     ajax.open("POST", "test.txt", true); //Use POST to avoid caching
-//     ajax.send();
-// }, 100000);
-
 var detailsVisible = false;
 
 function init() {
@@ -234,23 +177,11 @@ function parseJson(data) {
         var container = $("#section_1");
         container.append("<br>");
         container.append("<a href='#/' class='thick' onClick=\"$('#details_"+i+"').slideToggle(100)\">"+sample["dataset"]+"</a>");
-        // if(sample["status"] == "done") {
-        //     container.append("<br>#events in: " + sample["nevents_unmerged"]);
-        //     container.append("<br>#events out: " + sample["nevents_merged"]);
-        //     container.append("<br>location: " + sample["finaldir"]);
-        // } else {
         container.append("<div class='pbar' id='pbar_"+i+"'><span id='pbartext_"+i+"' class='pbartext'></span></div>");
-        // container.append("<div class='afterpbar' id='after_pbar_"+i+"'></div>");
-        // }
 
         // FIXME, display:none
         container.append("<div id='details_"+i+"' style='display:none;'></div>");
         // container.append("<div id='details_"+i+"' class='details' ></div>");
-        //
-        
-        // if(sample["status"] == "done") {
-        //     $( "#after_pbar_"+i ).append("in: " + sample["nevents_unmerged"] + ", out: " + sample["nevents_unmerged"]);
-        // }
 
         $( "#pbar_"+i ).progressbar({max: 100});
 

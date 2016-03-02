@@ -15,4 +15,7 @@
 - [ ] If merged files are already in the final directory, either warn users or mark job as done
 - [ ] Be able to nuke and resubmit job from dashboard
 - [ ] Resubmit crab task if been bootstrapped or some other thing for longer than x minutes
+- [ ] Before release, remove debugging and grep for "Autotupletest" and fix
+- [ ] Don't wait on last x% of MC samples to finish up in crab
+- [ ] Have Condor submission possibility for certain jobs that misbehave
 
