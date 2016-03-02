@@ -222,6 +222,7 @@ class Sample:
         config.section_('User')
         config.section_('Site')
         config.Site.storageSite = 'T2_US_UCSD'
+        config.Site.whitelist = ['T2_US_Caltech','T2_US_Florida', 'T2_US_MIT', 'T2_US_Nebraska', 'T2_US_Purdue', 'T2_US_UCSD', 'T2_US_Vanderbilt', 'T2_US_Wisconsin']
         self.misc["crab_config"] = config
     
     def make_pset(self):
@@ -282,6 +283,9 @@ class Sample:
         os.system("rm -rf %s" % self.sample["crab"]["taskdir"])
         os.system("rm %s/%s_cfg.py" % (self.misc["pfx_pset"], self.sample["shortname"]))
 
+    def nuke(self):
+        if self.crab_kill():
+            self.crab_delete_dir()
 
     def crab_submit(self):
         # first try to see if the job already exists naively
