@@ -11,7 +11,7 @@
 ## TODO:
 - [ ] Check that nothing happened to the files after copying (don't need to do full blown checkCMS3, just check event counts or something)
 - [ ] Parse checkCMS3 output and remake stuff appropriately
-- [ ] Be able to change xsec, kfact, efact before post-processing (either through web interface or through an updated instructions.txt)
+- [x] Be able to change xsec, kfact, efact before post-processing (through an updated instructions.txt)
 - [ ] Copy metadata to backup directory
 - [ ] If merged files are already in the final directory, either warn users or mark job as done
 - [ ] Be able to nuke and resubmit job from dashboard
@@ -21,4 +21,4 @@
 - [ ] Have Condor submission possibility for certain jobs that misbehave
 - [x] Make postprocessing part of sample show all jobs done when in done state
 - [x] If user enters full twiki name into the dashboard, automatically strip the beginning part to get only the end
-
+- [x] Re-read instructions.txt file every iteration to pull in new information/samples

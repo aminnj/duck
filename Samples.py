@@ -18,7 +18,9 @@ import utils as u
 
 class Sample:
 
-    def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, xsec=None, sparms=[], debug=True, logger_callback=None, specialdir_test = True):
+    def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, 
+                 xsec=None, sparms=[], debug=False, specialdir_test=False,
+                 logger_callback=None):
 
         setConsoleLogLevel(LOGLEVEL_MUTE)
 
@@ -105,6 +107,10 @@ class Sample:
     def __setitem__(self, k, v):
         self.sample[k] = v
     
+
+    def __eq__(self, other):
+        return "dataset" in other and other["dataset"] == self.sample["dataset"]
+
 
     def __str__(self):
         buff  = "[%s] %s: %s\n" % (self.pfx, self.sample["status"], self.sample["dataset"])
@@ -196,6 +202,14 @@ class Sample:
         self.sample["finaldir"] = "/hadoop/cms/store/group/snt/%s/%s/%s/" \
                 % (self.sample["specialdir"], self.sample["shortname"], self.sample["cms3tag"].split("_")[-1])
         self.pfx = self.sample["shortname"][:17] + "..."
+
+
+    def update_params(self, d):
+        for param in ["xsec", "kfact", "efact", "sparms"]:
+            if param in d and d[param] and not(d[param] == self.sample[param]):
+                self.do_log("found a new value of %s: %s. (old value: %s). updating." \
+                        % (param, d[param], self.sample[param]) )
+
 
     def make_crab_config(self):
         if self.misc["crab_config"] is not None: 
