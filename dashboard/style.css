@@ -4,7 +4,7 @@
 /* TOP BAR */
 #topBar {
     width: 100%;
-    font-size: 1.5em;
+    font-size: 1.9em;
     padding: 0px 10px 10px 10px;
     vertical-align: middle;
     font-weight: bold;
@@ -28,10 +28,11 @@
 body {
     padding: 0px;
     margin: 0px;
-    font-size: 1em;
+    font-size: 0.9em;
     font-family: Open Sans;
 }
 .pbar{
+    /* display: inline-block; */
     margin-top:10px;
     margin-bottom:10px;
     width: 600px;
@@ -67,7 +68,7 @@ body {
 .key { color: red; }
 
 pre {
-    font-size: 90%;
+    font-size: 100%;
     white-space: pre-wrap;
     outline: 1px solid #bbb;
     padding: 5px;

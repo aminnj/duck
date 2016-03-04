@@ -1,5 +1,6 @@
 # duck
 ## Instructions
+* If you want to use the Twiki utilities on the dashboard, make a `~/.twikipw` file that contains only your Twiki password. Of course, you should `chmod 600` it.
 * If beginning a new campaign, make sure to update JECs, CMSSW release, pset names, etc. inside `params.py`, otherwise, don't need to touch this
 * `source setup.sh` will set up your environment and make the dashboard
 * Use the dashboard to create an `instructions.txt` file
@@ -14,8 +15,10 @@
 - [ ] Copy metadata to backup directory
 - [ ] If merged files are already in the final directory, either warn users or mark job as done
 - [ ] Be able to nuke and resubmit job from dashboard
-- [ ] Resubmit crab task if been bootstrapped or some other thing for longer than x minutes
+- [x] Resubmit crab task if been bootstrapped or some other thing for longer than x minutes
 - [ ] Before release, remove debugging and grep for "Autotupletest" and fix
 - [ ] Don't wait on last x% of MC samples to finish up in crab
 - [ ] Have Condor submission possibility for certain jobs that misbehave
+- [x] Make postprocessing part of sample show all jobs done when in done state
+- [x] If user enters full twiki name into the dashboard, automatically strip the beginning part to get only the end
 

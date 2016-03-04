@@ -411,7 +411,11 @@ class Sample:
         if self.sample["crab"]["status"] == "SUBMITTED" and "taskWarningMsg" in stat:
             warning = stat["taskWarningMsg"]
             if len(warning) > 0 and "not yet bootstrapped" in warning[0]:
-                self.do_log("task has not bootstrapped yet, and it's been %i minutes" % self.minutes_since_crab_submit())
+                mins = self.minutes_since_crab_submit()
+                self.do_log("task has not bootstrapped yet, and it's been %i minutes" % mins)
+                if mins > 300: # resubmit if been more than 5 hours
+                    self.do_log("been more than 5 hours, so trying to resubmit")
+                    self.crab_resubmit()
 
         # population of each status (running, failed, etc.)
         if "jobsPerStatus" in stat:
@@ -621,7 +625,13 @@ class Sample:
 
     def is_merging_done(self):
         # want 0 running condor jobs and all merged files in output area
-        return len(self.get_condor_running()) == 0 and len(self.get_merged_done()) == len(self.sample["imerged_to_ijob"].keys())
+        done = len(self.get_condor_running()) == 0 and len(self.get_merged_done()) == len(self.sample["imerged_to_ijob"].keys())
+        if done:
+            self.sample["postprocessing"]["running"] = 0
+            self.sample["postprocessing"]["done"] = self.sample["postprocessing"]["total"]
+            self.sample["postprocessing"]["tosubmit"] = 0
+
+        return done
 
 
     def submit_merge_jobs(self):

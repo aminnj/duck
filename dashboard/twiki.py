@@ -12,6 +12,9 @@ def get_browser(page, username):
         username = user
 
     BASE_URL = "http://www.t2.ucsd.edu/tastwiki/bin/view/CMS/"
+    if "www.t2.ucsd.edu" in page:
+        # if user didn't specify fragment, but whole thing, then go with the flow
+        BASE_URL = ""
 
     with open(password_file, "r") as fhin: password = fhin.read().strip()
 
