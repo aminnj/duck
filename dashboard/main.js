@@ -1,7 +1,20 @@
 // initializations
 var alldata;
 $(function() {
-  init();
+    // $.getJSON("http://uaf-6.t2.ucsd.edu/~namin/dump/test.json", function(data) { parseJson(data); });
+    // WOW CAN PUT EXTERNAL URLS HERE MAN!
+    var jsonFile = "data.json";
+    var refreshSecs = 5*60;
+    $.getJSON(jsonFile, function(data) { 
+        setUpDOM(data); 
+        fillDOM(data); 
+    });
+
+    setInterval(function() {
+        $.getJSON(jsonFile, function(data) { 
+            fillDOM(data); 
+        });
+    }, refreshSecs*1000);
 
   $( "#selectPage" ).change(function() {
         if($(this).find(":selected").text()=="Other") {
@@ -13,7 +26,6 @@ $(function() {
 
   var duckMode = false;
   $( ".mainlogo" ).dblclick(function() { 
-    $( "#admin" ).slideToggle(150); 
     if(duckMode) {
       duckMode = false;
       $(".mainlogo").attr('src', 'images/crab.png');
@@ -35,7 +47,6 @@ $(function() {
     if (e.target) {
         if(e.target.value == "fetch" || e.target.value == "update") {
             doTwiki(e.target.value);
-            // console.log(alldata["samples"]);
         }
     }
   });
@@ -58,9 +69,7 @@ function doTwiki(type) {
             donesamples.push( alldata["samples"][i] );
         }
         console.log(donesamples);
-        // formObj["samples"] = JSON.stringify(["test"]);
         formObj["samples"] = JSON.stringify(donesamples);
-        // formObj["samples"] = donesamples;
     }
     var inputs = $("#fetchTwikiForm").serializeArray();
     $.each(inputs, function (i, input) {
@@ -71,7 +80,6 @@ function doTwiki(type) {
             url: "./handler.py",
             type: "POST",
             data: formObj,
-            // dataType: "json", 
             success: function(data) {
                     console.log(data);
                     $("#twikiTextarea").text(data);
@@ -81,15 +89,6 @@ function doTwiki(type) {
                     console.log(data);
                 },
        });
-}
-
-var detailsVisible = false;
-
-function init() {
-    // $.getJSON("http://uaf-6.t2.ucsd.edu/~namin/dump/test.json", function(data) { parseJson(data); });
-    // WOW CAN PUT EXTERNAL URLS HERE MAN!
-    // $.getJSON("data_old.json", function(data) { parseJson(data); });
-    $.getJSON("data.json", function(data) { parseJson(data); });
 }
 
 
@@ -161,9 +160,20 @@ function syntaxHighlight(json) {
     });
 }
 
+function setUpDOM(data) {
+    for(var i = 0; i < data["samples"].length; i++) {
+        var sample = data["samples"][i];
+        var container = $("#section_1");
+        container.append("<br>");
+        container.append("<a href='#/' class='thick' onClick=\"$('#details_"+i+"').slideToggle(100)\">"+sample["dataset"]+"</a>");
+        container.append("<div class='pbar' id='pbar_"+i+"'><span id='pbartext_"+i+"' class='pbartext'></span></div>");
+        container.append("<div id='details_"+i+"' style='display:none;'></div>");
+        $( "#pbar_"+i ).progressbar({max: 100});
+        $("#pbar_"+i).progressbar("option","value",0);
+    }
+}
 
-function parseJson(data) {
-
+function fillDOM(data) {
     alldata = data;
 
     var date = new Date(data["last_updated"]*1000); // ms to s
@@ -175,28 +185,17 @@ function parseJson(data) {
 
     for(var i = 0; i < data["samples"].length; i++) {
         var sample = data["samples"][i];
-        var container = $("#section_1");
-        container.append("<br>");
-        container.append("<a href='#/' class='thick' onClick=\"$('#details_"+i+"').slideToggle(100)\">"+sample["dataset"]+"</a>");
-        container.append("<div class='pbar' id='pbar_"+i+"'><span id='pbartext_"+i+"' class='pbartext'></span></div>");
-
-        // FIXME, display:none
-        container.append("<div id='details_"+i+"' style='display:none;'></div>");
-        // container.append("<div id='details_"+i+"' class='details' ></div>");
-
-        $( "#pbar_"+i ).progressbar({max: 100});
 
         var pct = Math.round(getProgress(sample));
-
         var color = 'hsl(' + pct*0.8 + ', 70%, 50%)';
-        // different color if completely done
         if(pct == 100) {
+            // different color if completely done
             color = 'hsl(' + pct*1.2 + ', 70%, 50%)';
         }
 
-        $("#pbar_"+i).progressbar("option","value",pct);
+        $("#pbar_"+i).progressbar("value", pct);
         $("#pbar_"+i).find(".ui-progressbar-value").css({"background": color});
-        $("#pbartext_"+i).append(sample["status"] + " [" + pct + "%]");
+        $("#pbartext_"+i).html(sample["status"] + " [" + pct + "%]");
 
         var jsStr = syntaxHighlight(JSON.stringify(sample, undefined, 4));
 
@@ -210,7 +209,6 @@ function parseJson(data) {
         // bold the output directory and event counts if it's done
         if(("finaldir" in sample) && (sample["status"] == "done")) {
             jsStr = jsStr.replace("\"finaldir\":</span> <span class=\"string\">", "\"finaldir\":</span> <span class=\"string bold\">");
-
             jsStr = jsStr.replace("\"nevents_DAS\":</span> <span class=\"number\">", "\"nevents_DAS\":</span> <span class=\"number bold\">");
             jsStr = jsStr.replace("\"nevents_unmerged\":</span> <span class=\"number\">", "\"nevents_unmerged\":</span> <span class=\"number bold\">");
             jsStr = jsStr.replace("\"nevents_merged\":</span> <span class=\"number\">", "\"nevents_merged\":</span> <span class=\"number bold\">");
@@ -218,12 +216,12 @@ function parseJson(data) {
 
         // turn dataset into a link to DAS
         jsStr = jsStr.replace("\"dataset\":", " <a href='https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod%2Fglobal&input="+sample["dataset"]+"' style='text-decoration: underline'>dataset</a>: ");
-        $("#details_"+i).append("<pre>" + jsStr + "</pre>");
-
-
+        $("#details_"+i).html("<pre>" + jsStr + "</pre>");
     }
+
 }
 
+var detailsVisible = false;
 function expandAll() {
     // do it this way because one guy may be reversed
     if(detailsVisible) {

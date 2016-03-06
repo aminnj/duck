@@ -39,7 +39,9 @@ if inp["action"] == "fetch":
     samples = twiki.get_samples(assigned_to=inp["name"], username=inp["username"], get_unmade=onlyUnmade, page=inp["page"])
     if not samples:
         print "None"
-    for sample in samples:
+    for isample, sample in enumerate(samples):
+        if isample == 0:
+            print "# samples assigned to %s from %s" % (inp["name"], inp["page"])
         print sample["dataset"], sample["gtag"], sample["xsec"], sample["kfact"], sample["efact"], sample["sparms"]
 
 elif inp["action"] == "update":
