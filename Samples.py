@@ -1,6 +1,6 @@
 import os, sys, glob
 import datetime, ast, tarfile, pprint
-import pickle
+import pickle, json
 
 try:
     from WMCore.Configuration import Configuration
@@ -735,6 +735,7 @@ class Sample:
     
     def make_metadata(self):
         metadata_file = self.sample["crab"]["taskdir"]+"/metadata.txt"
+        metadata_file_json = metadata_file.replace(".txt",".json")
         with open(metadata_file, "w") as fhout:
             print >>fhout,"sampleName: %s" % self.sample["dataset"]
             print >>fhout,"xsec: %s" % self.sample["xsec"]
@@ -757,8 +758,22 @@ class Sample:
                 nevents = sum([x[0] for x in nevents_both])
                 nevents_effective = sum([x[1] for x in nevents_both])
                 print >>fhout, "merged file nevents %i: %i %i" % (imerged, nevents, nevents_effective)
+
+        d_tot = self.sample.copy()
+        with open(metadata_file_json, "w") as fhout:
+            json.dump(d_tot, fhout, sort_keys = True, indent = 4)
+
+        # mirror the central snt directory structure for metadata files
+        metadatabank_dir = "/nfs-7/userdata/metadataBank/%s/%s/%s/" \
+                % (self.sample["specialdir"], self.sample["shortname"], self.sample["cms3tag"].split("_")[-1])
+
+        # copy txt to merged and backup. copy json to backup only
+        u.cmd('chmod a+w %s %s' % (metadata_file, metadata_file_json))
         u.cmd("cp %s %s/" % (metadata_file, self.sample["crab"]["outputdir"]+"/merged/"))
-        self.do_log("made metadata and copied it to merged area")
+        u.cmd('mkdir -p {0} ; chmod a+w {0}'.format(metadatabank_dir))
+        u.cmd('cp %s %s %s/' % (metadata_file, metadata_file_json, metadatabank_dir))
+
+        self.do_log("made metadata and copied it to merged and backup areas")
 
     def copy_files(self):
         self.do_log("started copying files to %s" % self.sample["finaldir"])
