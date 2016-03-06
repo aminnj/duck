@@ -8,7 +8,7 @@ try:
     from CRABClient.UserUtilities import setConsoleLogLevel
     from CRABClient.ClientUtilities import LOGLEVEL_MUTE
     # I recommend putting `Root.ErrorIgnoreLevel: Error` in your .rootrc file
-    from ROOT import TFile, TH1F
+    from ROOT import TFile, TH1F, TChain
 except:
     print ">>> Make sure to source setup.sh first!"
     sys.exit()
@@ -575,6 +575,11 @@ class Sample:
 
         return (False, n_entries, n_entries_eff, f.GetSize()/1.0e9)
 
+    def get_events_in_chain(self, fname_wildcard):
+        ch = TChain("Events")
+        ch.Add(fname_wildcard)
+        return ch.GetEntries()
+
 
     def make_merging_chunks(self):
         if self.fake_merge_lists:
@@ -764,7 +769,11 @@ class Sample:
             u.cmd( "mv %s/merged/* to %s/" % (self.sample["crab"]["outputdir"], self.sample["finaldir"]) )
         self.do_log("finished copying files")
 
-        self.sample["status"] = "done"
+        if self.get_events_in_chain(self.sample["finaldir"]+"/*.root") == self.sample['nevents_merged']:
+            # if finaldir doesn't have nevents_merged, must've been a mv error, so redo merging and mv again
+            self.sample["status"] = "done"
+        else:
+            self.submit_merge_jobs()
 
 
     def check_output(self):
@@ -800,7 +809,28 @@ class Sample:
         self.sample["checks"]["problems"] = problems
         self.sample['nevents_merged'] = self.sample['nevents_unmerged'] if tot_problems == 0 else 0
 
+        self.handle_sample_problems()
+
         return tot_problems == 0
+
+    def handle_sample_problems(self):
+        problems = self.sample["checks"]["problems"]
+        merged_dir = self.sample["crab"]["outputdir"]+"/merged/"
+
+        for problem in problems:
+            if "Wrong event count" in problem:
+                # delete this imerged
+                imerged = int(problem.split(".root")[0].split("_")[-1])
+                u.cmd("rm %s/merged_ntuple_%i.root" % (merged_dir, imerged))
+                self.submit_merge_jobs()
+            elif "events with zeros in" in problem:
+                # delete all merged and remerge
+                u.cmd("rm %s/merged_ntuple_*.root" % (merged_dir))
+                self.submit_merge_jobs()
+            elif "DAS query failed" in problem:
+                # probably transient, ignore and let check() try again later
+                pass
+
 
 if __name__=='__main__':
 
@@ -830,7 +860,8 @@ if __name__=='__main__':
               "kfact": 1.0,
               "efact": 1.0,
               "xsec": 0.0234,
-              "debug": True
+              "debug": True,
+              "specialdir_test": False,
               } )
 
     if u.proxy_hours_left() < 5:
