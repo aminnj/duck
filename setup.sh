@@ -10,7 +10,8 @@ export BASEDIR=`pwd`
 
 echo "[setup] Using $CMS3TAG and $CMSSW_VER for this campaign"
 
-if [ ! -d $CMSSW_VER ]; then
+# if the cmssw dir doesn't exist or the current tag hasn't been extracted
+if [ ! -d $CMSSW_VER ] || [ ! -e $CMSSW_VER/lib_${CMS3TAG}.tar.gz ]; then
     scramv1 p -n ${CMSSW_VER} CMSSW $CMSSW_VER
     cd ${CMSSW_VER}
     cmsenv
@@ -19,7 +20,7 @@ if [ ! -d $CMSSW_VER ]; then
     then
       echo "[setup] Making tar on-the-fly"
       source $BASEDIR/scripts/make_libCMS3.sh ${CMS3TAG} $CMSSW_VER
-      mv lib_${CMS3TAG}.tar.gz /nfs-7/userdata/libCMS3/lib_${CMS3TAG}.tar.gz
+      cp lib_${CMS3TAG}.tar.gz /nfs-7/userdata/libCMS3/lib_${CMS3TAG}.tar.gz
       cd $CMSSW_BASE
     else
       cd $CMSSW_BASE

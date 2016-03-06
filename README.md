@@ -12,7 +12,7 @@
 - [ ] Check that nothing happened to the files after copying (don't need to do full blown checkCMS3, just check event counts or something)
 - [ ] Parse checkCMS3 output and remake stuff appropriately
 - [x] Be able to change xsec, kfact, efact before post-processing (through an updated instructions.txt)
-- [ ] Copy metadata to backup directory
+- [ ] Copy metadata to backup directory (right now, it's copied only to the final directory)
 - [ ] If merged files are already in the final directory, either warn users or mark job as done
 - [ ] Be able to nuke and resubmit job from dashboard
 - [x] Resubmit crab task if been bootstrapped or some other thing for longer than x minutes
@@ -22,3 +22,4 @@
 - [x] Make postprocessing part of sample show all jobs done when in done state
 - [x] If user enters full twiki name into the dashboard, automatically strip the beginning part to get only the end
 - [x] Re-read instructions.txt file every iteration to pull in new information/samples
+- [ ] If crab status hasn't run yet, we'll have 0 running / 0 total, so monitor page shows NaN%. Force this to 0%.

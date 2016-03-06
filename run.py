@@ -19,9 +19,6 @@ if u.proxy_hours_left() < 20:
 
 u.copy_jecs()
 
-# for isample, s in enumerate(all_samples):
-#     s.nuke()
-# sys.exit()
 
 all_samples = []
 for i in range(5000):
@@ -36,6 +33,10 @@ for i in range(5000):
             all_samples.append(s)
         else:
             all_samples[all_samples.index(samp)].update_params(samp)
+
+    # for isample, s in enumerate(all_samples):
+    #     s.nuke()
+    # sys.exit()
 
     for isample, s in enumerate(all_samples):
         stat = s.get_status()
