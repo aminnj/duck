@@ -22,4 +22,5 @@
 - [x] Make postprocessing part of sample show all jobs done when in done state
 - [x] If user enters full twiki name into the dashboard, automatically strip the beginning part to get only the end
 - [x] Re-read instructions.txt file every iteration to pull in new information/samples
-- [ ] If crab status hasn't run yet, we'll have 0 running / 0 total, so monitor page shows NaN%. Force this to 0%.
+- [x] If crab status hasn't run yet, we'll have 0 running / 0 total, so monitor page shows NaN%. Force this to 0%.
+- [ ] Make tester class

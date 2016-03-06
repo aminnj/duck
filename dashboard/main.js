@@ -124,6 +124,7 @@ function getProgress(sample) {
         if("breakdown" in sample["crab"]) {
             done = sample["crab"]["breakdown"]["finished"];
             tot = sample["crab"]["njobs"];
+            if(tot < 1) tot = 1;
         }
         return 1.0 + 65.0*(done/tot);
 
