@@ -1,5 +1,6 @@
 var alldata = {};
 var jsonFile = "data.json";
+var baseDir = "/home/users/namin/sandbox/duck/";
 var refreshSecs = 10*60;
 var detailsVisible = false;
 var duckMode = false;
@@ -24,6 +25,9 @@ function handleSubmitButton() {
         if (e.target) {
             if(e.target.value == "fetch" || e.target.value == "update") {
                 doTwiki(e.target.value);
+            } else if(e.target.value == "addinstructions") {
+                // console.log("adding to instructions");
+                addInstructions(e.target.value);
             }
         }
     });
@@ -70,7 +74,7 @@ function loadJSON() {
 }
 
 function doTwiki(type) {
-    $("#twikiTextarea").text("Fetching...");
+    $("#twikiTextarea").text("Loading...");
     var formObj = {};
     formObj["action"] = type;
     if(type == "update") {
@@ -92,7 +96,29 @@ function doTwiki(type) {
             data: formObj,
             success: function(data) {
                     console.log(data);
-                    $("#twikiTextarea").text(data);
+                    $("#message").html();
+                    $("#twikiTextarea").val(data);
+                },
+            error: function(data) {
+                    $("#message").html("<span style='color:red'>Error:</span> "+data["responseText"]);
+                    console.log(data);
+                },
+       });
+}
+
+function addInstructions(type) {
+    var formObj = {};
+    formObj["action"] = type;
+    formObj["data"] = $("#twikiTextarea").val();
+    formObj["basedir"] = baseDir;
+    console.log(formObj);
+    $.ajax({
+            url: "./handler.py",
+            type: "POST",
+            data: formObj,
+            success: function(data) {
+                    $("#message").html("<span style='color:green'>"+data+"</span>");
+                    console.log(data);
                 },
             error: function(data) {
                     $("#message").html("<span style='color:red'>Error:</span> "+data["responseText"]);

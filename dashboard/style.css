@@ -129,7 +129,7 @@ button {
     font-size: inherit;
     background: #f0f0f0;
     padding: 3px 15px 3px 15px;
-    margin: auto 15px auto auto;
+    margin: auto 15px 7px auto;
     border: solid #000000 1px;
     text-decoration: none;
 }

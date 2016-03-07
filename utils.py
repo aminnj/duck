@@ -5,6 +5,7 @@ import pycurl
 import StringIO 
 import ast
 import datetime
+import params
 
 def get(cmd, returnStatus=False):
     status, out = commands.getstatusoutput(cmd)
@@ -24,17 +25,17 @@ def proxy_hours_left():
     return hours
 
 def copy_jecs():
-    import params
     for jec in params.jecs:
         if not os.path.isfile(jec):
             os.system("cp /nfs-7/userdata/JECs/%s ." % jec)
 
-web_dir = "%s/public_html/duck/" % os.getenv("HOME")
+web_dir = "%s/public_html/%s/" % (os.getenv("HOME"), params.dashboard_name)
 def make_dashboard():
     if not os.path.isdir(web_dir): os.makedirs(web_dir)
     cmd("chmod 755 -R %s" % web_dir)
     cmd("cp -rp dashboard/* %s/" % web_dir)
-    print "Monitoring page: http://uaf-6.t2.ucsd.edu/~%s/%s" % (os.getenv("USER"), web_dir.split("public_html/")[1])
+    cmd("sed -i s#BASEDIR_PLACEHOLDER#%s/# %s/main.js" % (os.getcwd(), web_dir))
+    print "http://uaf-6.t2.ucsd.edu/~%s/%s" % (os.getenv("USER"), web_dir.split("public_html/")[1])
 
 def copy_json():
     # cmd("cp data.json ~/public_html/autotupletest/")
@@ -97,11 +98,11 @@ if __name__=='__main__':
     # else:
     #     print "Proxy looks good"
 
-    print dataset_event_count('/SMS-T5ttcc_mGl-1025to1200_mLSP-0to1025_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15MiniAODv2-FastAsympt25ns_74X_mcRun2_asymptotic_v2-v1/MINIAODSIM')
+    # print dataset_event_count('/SMS-T5ttcc_mGl-1025to1200_mLSP-0to1025_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15MiniAODv2-FastAsympt25ns_74X_mcRun2_asymptotic_v2-v1/MINIAODSIM')
     # print dataset_event_count('/DYJetsToLL_M-50_Zpt-150toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15DR74-Asympt25ns_MCRUN2_74_V9-v1/MINIAODSIM')
 
     # for samp in read_samples():
     #     print samp
     
-    # make_dashboard()
+    make_dashboard()
 
