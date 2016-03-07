@@ -41,6 +41,7 @@ source /cvmfs/cms.cern.ch/crab3/crab.sh
 cd $BASEDIR
 
 if [ ! -e ~/public_html/.htaccess ]; then
+    echo "[setup] don't have .htaccess file. copying one to ~/public_html/ for you"
     cp dashboard/htaccess ~/public_html/.htaccess
     chmod 755 ~/public_html/.htaccess
 fi

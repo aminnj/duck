@@ -1,0 +1,5 @@
+# lines beginning with '#' are ignored
+# dataset xsec kfact efact [sparms]
+/ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/MINIAODSIM 74X_mcRun2_asymptotic_v2 0.123 1 1
+/TTTT_TuneCUETP8M1_13TeV-amcatnlo-pythia8/RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/MINIAODSIM 74X_mcRun2_asymptotic_v2 0.0234 1 1
+/SMS-T1tttt_mGluino-975_mLSP-600to750_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15MiniAODv2-FastAsympt25ns_74X_mcRun2_asymptotic_v2-v1/MINIAODSIM 74X_mcRun2_asymptotic_v2 1.0 1 1 mGluino,mLSP

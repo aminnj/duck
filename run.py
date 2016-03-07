@@ -6,7 +6,7 @@ import json
 import sys
 import os
 
-instructions = "instructions.txt"
+instructions = "instructions_test.txt"
 if len(sys.argv) > 1:
     instructions = sys.argv[1]
     if not os.path.isfile(instructions):

@@ -1,4 +1,4 @@
-import os, sys, glob
+import os, sys, glob, select
 import datetime, ast, tarfile, pprint
 import pickle, json
 
@@ -56,6 +56,8 @@ class Sample:
         self.misc["rootfiles"] = []
         self.misc["logfiles"] = []
         self.misc["last_saved"] = None # when was the last time we backed up this sample data
+        # self.misc["handled_prechecks"] = False
+        # self.misc["passed_prechecks"] = True
 
         self.sample = {
                 "basedir" : "",
@@ -164,9 +166,8 @@ class Sample:
             with open(backup_file,"r") as fhin:
                 d_tot = pickle.load(fhin)
 
-            for key in d_tot["sample"].keys():
-                self.sample[key] = d_tot["sample"][key]
-            self.misc = d_tot["misc"].copy()
+            for key in d_tot["sample"].keys(): self.sample[key] = d_tot["sample"][key]
+            for key in d_tot["misc"].keys(): self.misc[key] = d_tot["misc"][key]
             last_saved = self.misc["last_saved"]
             if last_saved:
                 min_ago = round((u.get_timestamp() - last_saved) / 60.0)
@@ -642,6 +643,30 @@ class Sample:
         return set(map(lambda x: int(x.split("_")[-1].split(".")[0]), files))
 
 
+    # def pass_tsa_prechecks(self):
+    #     if self.misc["handled_prechecks"]:
+    #         return self.misc["passed_prechecks"]
+
+    #     # check is sample has already been done
+    #     final_dir = self.sample["finaldir"]
+    #     is_done = False
+    #     if os.path.isdir(final_dir):
+    #         files = [f for f in os.listdir(final_dir) if f.endswith(".root")]
+    #         if len(files) > 0: is_done = True
+
+    #     self.do_log("hey! it looks like this sample already exists in the final hadoop directory.")
+    #     self.do_log("do you want to remake? [y/n] if you don't answer in 10 seconds, will assume no.")
+    #     i, o, e = select.select( [sys.stdin], [], [], 10 )
+    #     if i:
+    #         inp = sys.stdin.readline().strip()
+    #         if "y" in inp.lower():
+    #             self.do_log("ok, will continue and remake it")
+    #     else:
+    #         self.do_log("you ignored me. will not remake. sample will be put in 'done' status now")
+    #         self.sample["status"] = "done"
+
+    #     self.misc["handled_prechecks"] = True
+
     def is_merging_done(self):
         # want 0 running condor jobs and all merged files in output area
         done = len(self.get_condor_running()) == 0 and len(self.get_merged_done()) == len(self.sample["imerged_to_ijob"].keys())
@@ -788,6 +813,7 @@ class Sample:
             # if finaldir doesn't have nevents_merged, must've been a mv error, so redo merging and mv again
             self.sample["status"] = "done"
         else:
+            self.do_log("lost some events after moving into final directory. re-merging now.")
             self.submit_merge_jobs()
 
 
@@ -886,6 +912,8 @@ if __name__=='__main__':
         print "Proxy looks good"
 
     u.copy_jecs()
+
+    # s.handle_tsa_prechecks()
 
     s.crab_submit()
 

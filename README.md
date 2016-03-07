@@ -3,7 +3,7 @@
 * If you want to use the Twiki utilities on the dashboard, make a `~/.twikipw` file that contains only your Twiki password. Of course, you should `chmod 600` it.
 * If beginning a new campaign, make sure to update JECs, CMSSW release, pset names, etc. inside `params.py`, otherwise, don't need to touch this
 * `source setup.sh` will set up your environment and make the dashboard
-* Use the dashboard to create an `instructions.txt` file
+* Use the dashboard to create an `instructions.txt` file (or make it manually following the format of `instructions_test.txt`
 * At this point, I prefer to start a screen and then make sure to `source setup.sh` (maybe a couple of times until it doesn't complain).
 * `python run.py instructions.txt`
 * Sit back and relax
@@ -23,3 +23,4 @@
 - [x] Re-read instructions.txt file every iteration to pull in new information/samples
 - [x] If crab status hasn't run yet, we'll have 0 running / 0 total, so monitor page shows NaN%. Force this to 0%.
 - [ ] Make tester class
+- [x] Add example instructions.txt
