@@ -1,3 +1,6 @@
 *.pyc
 *.db
 CMSSW_*/
+crab/
+pset/
+data.json
