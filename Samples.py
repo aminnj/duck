@@ -65,6 +65,7 @@ class Sample:
                 "shortname": dataset.split("/")[1]+"_"+dataset.split("/")[2],
                 "user" : os.getenv("USER"), #FIXME: for people with different hadoop mapping, only need to change this
                 "cms3tag" : params.cms3tag,
+                "cmsswver" : params.cmssw_ver,
                 "gtag" : gtag,
                 "kfact" : kfact,
                 "efact" : efact,

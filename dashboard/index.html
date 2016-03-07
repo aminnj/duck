@@ -24,6 +24,7 @@
                 &emsp;
                 <a href="#" id="toggle_all" onClick="expandAll()">show details</a>&ensp;|&ensp;
                 <a href="#" onClick="$('#twiki').slideToggle(100)">twiki</a>
+                <span id="admin" style="color:#33B333; display:none;">&emsp;&emsp;admin mode</span>
             </span>
         </div>
         <div id="colorstrip"></div>
@@ -31,10 +32,9 @@
         <div id="container">
 
             <span id="last_updated" class="lastUpdated"></span>
-            <!-- <div id="twiki" class="section" style='display:none;'> -->
-            <div id="twiki" class="section">
-                Get sample information from Twiki to paste into instructions.txt.
-                <b>Only</b> need to specify username if Twiki username is different from UAF.
+            <div id="twiki" class="section" style='display:none;'>
+            <!-- <div id="twiki" class="section"> -->
+                <b>Only</b> need to specify username if Twiki username is different from UAF username.
                 <br>
 
                 <form id="fetchTwikiForm" action="javascript:void(0)">

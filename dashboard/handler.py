@@ -70,6 +70,8 @@ elif inp["action"] == "addinstructions":
 
     fname = basedir + "instructions_autotupletest.txt"
 
+    if len(samples) < 1: sys.exit()
+
     with open(fname, "a") as fhin:
         fhin.write("\n\n# following %i samples injected from dashboard on %s\n" \
                 % (len(samples), str(datetime.datetime.now())))

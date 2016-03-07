@@ -4,6 +4,7 @@ var baseDir = "/home/users/namin/sandbox/duck/";
 var refreshSecs = 10*60;
 var detailsVisible = false;
 var duckMode = false;
+var adminMode = false;
 
 $(function() {
     loadJSON();
@@ -12,6 +13,7 @@ $(function() {
     handleDuckMode();
     handleOtherTwiki();
     handleSubmitButton();
+    handleAdminMode();
 
 });
 
@@ -39,6 +41,19 @@ function handleOtherTwiki() {
             $("#otherPage").show();
         } else {
             $("#otherPage").hide();
+        }
+    });
+}
+
+function handleAdminMode() {
+    $( "#firstTitle" ).click(function() { 
+        $( "#admin" ).slideToggle(150); 
+        if(adminMode) {
+            adminMode = false;
+            fillDOM(alldata);
+        } else {
+            adminMode = true;
+            fillDOM(alldata);
         }
     });
 }
@@ -74,7 +89,9 @@ function loadJSON() {
 }
 
 function doTwiki(type) {
-    $("#twikiTextarea").text("Loading...");
+    $("#twikiTextarea").val("Loading...");
+    $("#message").html("");
+
     var formObj = {};
     formObj["action"] = type;
     if(type == "update") {
@@ -96,7 +113,6 @@ function doTwiki(type) {
             data: formObj,
             success: function(data) {
                     console.log(data);
-                    $("#message").html();
                     $("#twikiTextarea").val(data);
                 },
             error: function(data) {
@@ -201,10 +217,17 @@ function setUpDOM(data) {
     container.empty(); // clear the section
     for(var i = 0; i < data["samples"].length; i++) {
         var sample = data["samples"][i];
-        container.append("<br>");
-        container.append("<a href='#/' class='thick' onClick=\"$('#details_"+i+"').slideToggle(100)\">"+sample["dataset"]+"</a>");
-        container.append("<div class='pbar' id='pbar_"+i+"'><span id='pbartext_"+i+"' class='pbartext'></span></div>");
-        container.append("<div id='details_"+i+"' style='display:none;'></div>");
+        var toappend = "";
+        toappend += "<br>";
+        toappend += "<a href='#/' class='thick' onClick=\"$('#details_"+i+"').slideToggle(100)\">"+sample["dataset"]+"</a>";
+        toappend += "<div class='pbar' id='pbar_"+i+"'>";
+        toappend +=      "<span id='pbartextleft_"+i+"' class='pbartextleft'></span>";
+        toappend +=      "<span id='pbartextright_"+i+"' class='pbartextright'></span>";
+        toappend += "</div>";
+        toappend += "<div id='details_"+i+"' style='display:none;'></div>";
+
+        container.append(toappend);
+
         $( "#pbar_"+i ).progressbar({max: 100});
         $("#pbar_"+i).progressbar("option","value",0);
     }
@@ -232,7 +255,12 @@ function fillDOM(data) {
 
         $("#pbar_"+i).progressbar("value", pct);
         $("#pbar_"+i).find(".ui-progressbar-value").css({"background": color});
-        $("#pbartext_"+i).html(sample["status"] + " [" + pct + "%]");
+        $("#pbartextright_"+i).html(sample["status"] + " [" + pct + "%]");
+        $("#pbartextleft_"+i).html(""); 
+
+        if(adminMode) {
+            $("#pbartextleft_"+i).html("<a href='#/' onClick='console.log($(this).parent().parent().prev().text());'>&#9762;</a>"); 
+        }
 
         var jsStr = syntaxHighlight(JSON.stringify(sample, undefined, 4));
 
