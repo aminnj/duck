@@ -1,56 +1,16 @@
-// initializations
-var alldata;
+var alldata = {};
+var jsonFile = "data.json";
+var refreshSecs = 10*60;
+var detailsVisible = false;
+var duckMode = false;
+
 $(function() {
-    // $.getJSON("http://uaf-6.t2.ucsd.edu/~namin/dump/test.json", function(data) { parseJson(data); });
-    // WOW CAN PUT EXTERNAL URLS HERE MAN!
-    var jsonFile = "data.json";
-    var refreshSecs = 5*60;
-    $.getJSON(jsonFile, function(data) { 
-        setUpDOM(data); 
-        fillDOM(data); 
-    });
+    loadJSON();
+    setInterval(loadJSON, refreshSecs*1000);
 
-    setInterval(function() {
-        $.getJSON(jsonFile, function(data) { 
-            fillDOM(data); 
-        });
-    }, refreshSecs*1000);
-
-  $( "#selectPage" ).change(function() {
-        if($(this).find(":selected").text()=="Other") {
-            $("#otherPage").show();
-        } else {
-            $("#otherPage").hide();
-        }
-  });
-
-  var duckMode = false;
-  $( ".mainlogo" ).dblclick(function() { 
-    if(duckMode) {
-      duckMode = false;
-      $(".mainlogo").attr('src', 'images/crab.png');
-      $("#container").css("background", "");
-      $("#firstTitle").text("auto");
-      $(".duckAudio").trigger('pause');
-    } else {
-      duckMode = true;
-      $(".mainlogo").attr('src', 'images/ducklogo.png');
-      $("#container").css("background", "url(images/ducklogo.png");
-      $("#firstTitle").text("duck");
-      $(".duckAudio").prop("currentTime",0);
-      $(".duckAudio").trigger('play');
-    }
-  });
-
-
-  $('.submitButton').click(function (e) {
-    if (e.target) {
-        if(e.target.value == "fetch" || e.target.value == "update") {
-            doTwiki(e.target.value);
-        }
-    }
-  });
-
+    handleDuckMode();
+    handleOtherTwiki();
+    handleSubmitButton();
 
 });
 
@@ -58,6 +18,56 @@ $.ajaxSetup({
    type: 'POST',
    timeout: 5000,
 });
+
+function handleSubmitButton() {
+    $('.submitButton').click(function (e) {
+        if (e.target) {
+            if(e.target.value == "fetch" || e.target.value == "update") {
+                doTwiki(e.target.value);
+            }
+        }
+    });
+}
+
+function handleOtherTwiki() {
+    $( "#selectPage" ).change(function() {
+        if($(this).find(":selected").text()=="Other") {
+            $("#otherPage").show();
+        } else {
+            $("#otherPage").hide();
+        }
+    });
+}
+
+function handleDuckMode() {
+    $( ".mainlogo" ).dblclick(function() { 
+        if(duckMode) {
+            duckMode = false;
+            $(".mainlogo").attr('src', 'images/crab.png');
+            $("#container").css("background", "");
+            $("#firstTitle").text("auto");
+            $(".duckAudio").trigger('pause');
+        } else {
+            duckMode = true;
+            $(".mainlogo").attr('src', 'images/ducklogo.png');
+            $("#container").css("background", "url(images/ducklogo.png");
+            $("#firstTitle").text("duck");
+            $(".duckAudio").prop("currentTime",0);
+            $(".duckAudio").trigger('play');
+        }
+    });
+}
+
+function loadJSON() {
+    // $.getJSON("http://uaf-6.t2.ucsd.edu/~namin/dump/test.json", function(data) { parseJson(data); });
+    // WOW CAN PUT EXTERNAL URLS HERE MAN!
+    $.getJSON(jsonFile, function(data) { 
+        if(!("samples" in alldata) || (data["samples"].length != alldata["samples"].length)) {
+            setUpDOM(data);
+        }
+        fillDOM(data); 
+    });
+}
 
 function doTwiki(type) {
     $("#twikiTextarea").text("Fetching...");
@@ -161,9 +171,10 @@ function syntaxHighlight(json) {
 }
 
 function setUpDOM(data) {
+    var container = $("#section_1");
+    container.empty(); // clear the section
     for(var i = 0; i < data["samples"].length; i++) {
         var sample = data["samples"][i];
-        var container = $("#section_1");
         container.append("<br>");
         container.append("<a href='#/' class='thick' onClick=\"$('#details_"+i+"').slideToggle(100)\">"+sample["dataset"]+"</a>");
         container.append("<div class='pbar' id='pbar_"+i+"'><span id='pbartext_"+i+"' class='pbartext'></span></div>");
@@ -221,7 +232,6 @@ function fillDOM(data) {
 
 }
 
-var detailsVisible = false;
 function expandAll() {
     // do it this way because one guy may be reversed
     if(detailsVisible) {
