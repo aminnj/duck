@@ -50,8 +50,8 @@ def get_samples(assigned_to, username, get_unmade=True, page="Autotupletest"):
         line = line.strip()
         dataset, filter_type, nevents_in, nevents_out, xsec, kfact, efact, gtag, cms3tag, location, assigned, comments = map(lambda x: x.strip(), line.split("|")[1:-1])
         sparms = ""
-        if "sparm" in comments:
-            sparms = comments.split("sparms:")[1].strip()
+        if "sParms:" in comments:
+            sparms = comments.split("sParms:")[1].strip()
 
         if not(assigned == assigned_to or assigned_to.lower() == "all"): continue
 
