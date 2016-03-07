@@ -40,7 +40,7 @@ function handleOtherTwiki() {
 }
 
 function handleDuckMode() {
-    $( ".mainlogo" ).dblclick(function() { 
+    $( ".mainlogo" ).on('contextmenu dblclick',function() { 
         if(duckMode) {
             duckMode = false;
             $(".mainlogo").attr('src', 'images/crab.png');
