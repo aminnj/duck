@@ -103,6 +103,7 @@ class Sample:
         self.load() # load backup of this sample when we instantiate it
 
 
+
     def __getitem__(self, i):
         return self.sample[i]
 
@@ -202,7 +203,7 @@ class Sample:
 
         self.sample["basedir"] = os.getcwd()+"/"
         self.sample["finaldir"] = "/hadoop/cms/store/group/snt/%s/%s/%s/" \
-                % (self.sample["specialdir"], self.sample["shortname"], self.sample["cms3tag"].split("_")[-1])
+                % (self.sample["specialdir"], self.sample["shortname"], self.sample["cms3tag"].split("_",1)[1])
         self.pfx = self.sample["shortname"][:17] + "..."
 
 
