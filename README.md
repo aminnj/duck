@@ -16,7 +16,7 @@
 - [ ] If merged files are already in the final directory, either warn users or mark job as done
 - [ ] Be able to nuke and resubmit job from dashboard
 - [x] Resubmit crab task if been bootstrapped or some other thing for longer than x minutes
-- [ ] Don't wait on last x% of MC samples to finish up in crab
+- [x] Don't wait on last x% of MC samples to finish up in crab (put a mask on the job number)
 - [ ] Have Condor submission possibility for certain jobs that misbehave
 - [x] Make postprocessing part of sample show all jobs done when in done state
 - [x] If user enters full twiki name into the dashboard, automatically strip the beginning part to get only the end

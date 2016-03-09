@@ -20,7 +20,7 @@ class Sample:
 
     def __init__(self, dataset=None, gtag=None, kfact=None, efact=None, 
                  xsec=None, sparms=[], debug=False, specialdir_test=False,
-                 logger_callback=None):
+                 do_skip_tail=True,logger_callback=None):
 
         setConsoleLogLevel(LOGLEVEL_MUTE)
 
@@ -45,6 +45,7 @@ class Sample:
             self.fake_copy = False
 
         self.specialdir_test = specialdir_test
+        self.do_skip_tail = do_skip_tail
 
         # dirs are wrt the base directory where this script is located
 
@@ -56,6 +57,7 @@ class Sample:
         self.misc["rootfiles"] = []
         self.misc["logfiles"] = []
         self.misc["last_saved"] = None # when was the last time we backed up this sample data
+        self.misc["can_skip_tail"] = False
         # self.misc["handled_prechecks"] = False
         # self.misc["passed_prechecks"] = True
 
@@ -92,6 +94,8 @@ class Sample:
         self.sample["crab"]["taskdir"] = self.misc["pfx_crab"]+"/crab_"+self.sample["crab"]["requestname"]
         self.sample["crab"]["datetime"] = None # "160220_151313" from crab request name
         self.sample["crab"]["resubmissions"] = 0 # number of times we've "successfully" resubmitted a crab job
+        self.sample["crab"]["jobs_left"] = [] # keep track of job ids that are not done
+        self.sample["crab"]["jobs_left_tail"] = [] # keep track of job ids that are taking forever (in the tail)
 
         self.logger_callback = None
 
@@ -139,6 +143,8 @@ class Sample:
         del new_dict["imerged_to_ijob"]
         del new_dict["ijob_to_miniaod"]
         del new_dict["ijob_to_nevents"]
+        if "jobs_left" in new_dict["crab"]:
+            del new_dict["crab"]["jobs_left"]
         return new_dict
 
 
@@ -377,7 +383,7 @@ class Sample:
                      'jobsPerStatus': {'finished': 8}, 'outdatasets': None, 'publication': {}, 'publicationFailures': {}, 'schedd': 'crab3-1@submit-5.t2.ucsd.edu',
                      'status': 'COMPLETED', 'statusFailureMsg': '', 'taskFailureMsg': '', 'taskWarningMsg': [], 'totalJobdefs': 0} 
             else:
-                out = crabCommand('status', dir=self.sample["crab"]["taskdir"], proxy=u.get_proxy_file())
+                out = crabCommand('status', dir=self.sample["crab"]["taskdir"], proxy=u.get_proxy_file(), json=True)
             self.crab_status_res = out
             return 1 # succeeded
         except Exception as e:
@@ -402,6 +408,7 @@ class Sample:
     def crab_parse_status(self):
         self.crab_status()
         stat = self.crab_status_res
+        # print stat
 
         try:
             self.sample["crab"]["status"] = stat.get("status")
@@ -438,6 +445,42 @@ class Sample:
         if "jobsPerStatus" in stat:
             for status,jobs in stat["jobsPerStatus"].items():
                 self.sample["crab"]["breakdown"][status] = jobs
+
+        done_frac = 1.0*self.sample["crab"]["njobs"]/self.sample["crab"]["breakdown"]["finished"]
+        self.sample["crab"]["jobs_left"] = []
+        self.sample["crab"]["jobs_left_tail"] = []
+        if "jobs" in stat and "jobList" in stat:
+            for status, ijob in stat["jobList"]:
+                if not(status == "finished"):
+                    # now look up job in the "jobs" dictionary. example of job_info below:
+                    # {'Retries': 5, 'WallDurations': [3367.0, 13520.0, 15821.0, 8811.0, 10528.0, 1040.0], 'StartTimes':
+                    # [1457345940.0, 1457381466.0, 1457396962.0, 1457415108.0, 1457436816.0, 1457449310.0], 'SubmitTimes':
+                    # [1457345368.0, 1457381344.0, 1457396763.0, 1457414693.0, 1457436538.0, 1457448807.0], 'JobIds': ['7158216.0',
+                    # '7188315.0', '7190921.0', '7198820.0', '7209773.0', '7217653.0'], 'EndTimes': [1457349306.0, 1457394751.0,
+                    # 1457412626.0, 1457423672.0, 1457446619.0], 'Restarts': 0, 'RecordedSite': True, 'State': 'running',
+                    # 'ResidentSetSize': [1207312, 1239416, 1258848, 1195008, 1254328, 1267400], 'TotalUserCpuTimeHistory': [2500,
+                    # 12158, 14706, 7816, 8965, 1014.0], 'SiteHistory': ['T2_US_Purdue', 'T2_US_Vanderbilt', 'T2_US_Florida',
+                    # 'T2_US_Vanderbilt', 'T2_US_Vanderbilt', 'T2_US_Nebraska'], 'TotalSysCpuTimeHistory': [73, 168, 286, 104, 144, 23.0]}
+                    job_info = stat["jobs"][str(ijob)]
+                    avg_walltime = 1.0*sum(job_info['WallDurations'])/len(job_info['WallDurations'])
+                    state, nretries = job_info['State'], job_info['Retries']
+                    print ">>>> job %i (%s) has been retried %i times with an average walltime of %.1f" \
+                            % (ijob, state, nretries, avg_walltime)
+                    print "done frac: %.1f" % done_frac
+
+                    self.sample["crab"]["jobs_left"].append(ijob)
+
+                    if nretries > 2 and done_frac > 0.95:
+                        self.sample["crab"]["jobs_left_tail"].append(ijob)
+
+        print self.sample["crab"]["jobs_left"]
+        print self.sample["crab"]["jobs_left_tail"]
+        if self.do_skip_tail and self.sample["crab"]["jobs_left"] == self.sample["crab"]["jobs_left_tail"]:
+            # this means that all crab jobs left are jobs in the tail, so let's ignore them and forge onwards with merging
+            self.do_log("there are %i tail jobs left that we will ignore from now on" % len(self.sample["crab"]["jobs_left_tail"]))
+            self.misc["can_skip_tail"] = True
+            self.sample["crab"]["status"] = "COMPLETED"
+
 
         # find most common error (if exists)
         error_codes, details = [], []
@@ -488,15 +531,23 @@ class Sample:
 
         self.handle_more_than_1k()
 
+        def get_num(fname): return int(fname.split("_")[-1].split(".")[0])
+
         njobs = self.sample["crab"]["njobs"]
         self.misc["rootfiles"] = glob.glob(self.sample["crab"]["outputdir"] + "/*.root")
         self.misc["logfiles"] = glob.glob(self.sample["crab"]["outputdir"] + "/log/*.tar.gz")
 
+        if self.do_skip_tail and self.misc["can_skip_tail"]:
+            self.do_log("pruning the ignored tail files from rootfiles and logfiles")
+            self.misc["rootfiles"] = [fname for fname in self.misc["rootfiles"] if get_num(fname) not in self.sample["crab"]["jobs_left_tail"]]
+            self.misc["logfiles"] = [fname for fname in self.misc["logfiles"] if get_num(fname) not in self.sample["crab"]["jobs_left_tail"]]
+            njobs -= len(self.sample["crab"]["jobs_left_tail"])
+
         if njobs == len(self.misc["rootfiles"]) and not(njobs == len(self.misc["logfiles"])):
             # we have all the root files, but evidently some log files got lost. try to recover them
             # format: ntuple_1.root and cmsRun_1.log.tar.gz
-            root_file_numbers = set([int(rfile.split("_")[-1].split(".")[0]) for rfile in self.misc["rootfiles"]])
-            log_file_numbers = set([int(lfile.split("_")[-1].split(".")[0]) for lfile in self.misc["logfiles"]])
+            root_file_numbers = set([get_num(rfile) for rfile in self.misc["rootfiles"]])
+            log_file_numbers = set([get_num(lfile) for lfile in self.misc["logfiles"]])
             log_dont_have = list(root_file_numbers - log_file_numbers)
             if len(log_dont_have) > 0:
                 jobids = ",".join(map(str, log_dont_have))
@@ -531,9 +582,11 @@ class Sample:
             }
             return
 
+        print "ijob_to_miniaod", self.sample["ijob_to_miniaod"]
         if not self.sample["ijob_to_miniaod"]:
             self.do_log("making map from unmerged number to miniaod name")
             for logfile in self.misc["logfiles"]:
+                print logfile
                 if ".tar.gz" in logfile:
                     with  tarfile.open(logfile, "r:gz") as tar:
                         for member in tar:
@@ -593,12 +646,14 @@ class Sample:
             self.sample['imerged_to_ijob'] = {1: [1, 2, 3, 4], 2: [5, 6, 7, 8]}
             return
 
+        print "imerged_to_ijob", self.sample["imerged_to_ijob"]
         if not self.sample["imerged_to_ijob"]: 
             self.do_log("making map from merged index to unmerged indicies")
             group, groups = [], []
             tot_size = 0.0
             for rfile in self.misc["rootfiles"]:
                 is_bad, nevents, nevents_eff, file_size = self.get_rootfile_info(rfile)
+                print is_bad, nevents, nevents_eff, file_size, rfile
                 ijob = int(rfile.split("_")[-1].replace(".root",""))
                 self.sample["ijob_to_nevents"][ijob] = [nevents, nevents_eff]
                 if is_bad: continue
@@ -613,7 +668,6 @@ class Sample:
                 self.sample["imerged_to_ijob"][igp+1] = gp
 
             self.sample['nevents_unmerged'] = sum([x[0] for x in self.sample['ijob_to_nevents'].values()])
-            
 
 
     def get_condor_running(self):
@@ -863,9 +917,14 @@ class Sample:
         for problem in problems:
             if "Wrong event count" in problem:
                 # delete this imerged
-                imerged = int(problem.split(".root")[0].split("_")[-1])
-                u.cmd("rm %s/merged_ntuple_%i.root" % (merged_dir, imerged))
-                self.submit_merge_jobs()
+                if not self.do_skip_tail:
+                    imerged = int(problem.split(".root")[0].split("_")[-1])
+                    u.cmd("rm %s/merged_ntuple_%i.root" % (merged_dir, imerged))
+                    self.submit_merge_jobs()
+                else:
+                    # FIXME be smart about event counts? or is there no way to get event counts
+                    # until crab has finished? but that defeats purpose of do_skip_tail
+                    pass
             elif "events with zeros in" in problem:
                 # delete all merged and remerge
                 u.cmd("rm %s/merged_ntuple_*.root" % (merged_dir))
