@@ -464,17 +464,17 @@ class Sample:
                     job_info = stat["jobs"][str(ijob)]
                     avg_walltime = 1.0*sum(job_info['WallDurations'])/len(job_info['WallDurations'])
                     state, nretries = job_info['State'], job_info['Retries']
-                    print ">>>> job %i (%s) has been retried %i times with an average walltime of %.1f" \
-                            % (ijob, state, nretries, avg_walltime)
-                    print "done frac: %.1f" % done_frac
+                    # print ">>>> job %i (%s) has been retried %i times with an average walltime of %.1f" \
+                    #         % (ijob, state, nretries, avg_walltime)
+                    # print "done frac: %.1f" % done_frac
 
                     self.sample["crab"]["jobs_left"].append(ijob)
 
                     if nretries > 2 and done_frac > 0.95:
                         self.sample["crab"]["jobs_left_tail"].append(ijob)
 
-        print self.sample["crab"]["jobs_left"]
-        print self.sample["crab"]["jobs_left_tail"]
+        # print self.sample["crab"]["jobs_left"]
+        # print self.sample["crab"]["jobs_left_tail"]
         if self.do_skip_tail and self.sample["crab"]["jobs_left"] == self.sample["crab"]["jobs_left_tail"]:
             # this means that all crab jobs left are jobs in the tail, so let's ignore them and forge onwards with merging
             self.do_log("there are %i tail jobs left that we will ignore from now on" % len(self.sample["crab"]["jobs_left_tail"]))
@@ -582,11 +582,11 @@ class Sample:
             }
             return
 
-        print "ijob_to_miniaod", self.sample["ijob_to_miniaod"]
+        # print "ijob_to_miniaod", self.sample["ijob_to_miniaod"]
         if not self.sample["ijob_to_miniaod"]:
             self.do_log("making map from unmerged number to miniaod name")
             for logfile in self.misc["logfiles"]:
-                print logfile
+                # print logfile
                 if ".tar.gz" in logfile:
                     with  tarfile.open(logfile, "r:gz") as tar:
                         for member in tar:
@@ -646,14 +646,14 @@ class Sample:
             self.sample['imerged_to_ijob'] = {1: [1, 2, 3, 4], 2: [5, 6, 7, 8]}
             return
 
-        print "imerged_to_ijob", self.sample["imerged_to_ijob"]
+        # print "imerged_to_ijob", self.sample["imerged_to_ijob"]
         if not self.sample["imerged_to_ijob"]: 
             self.do_log("making map from merged index to unmerged indicies")
             group, groups = [], []
             tot_size = 0.0
             for rfile in self.misc["rootfiles"]:
                 is_bad, nevents, nevents_eff, file_size = self.get_rootfile_info(rfile)
-                print is_bad, nevents, nevents_eff, file_size, rfile
+                # print is_bad, nevents, nevents_eff, file_size, rfile
                 ijob = int(rfile.split("_")[-1].replace(".root",""))
                 self.sample["ijob_to_nevents"][ijob] = [nevents, nevents_eff]
                 if is_bad: continue
