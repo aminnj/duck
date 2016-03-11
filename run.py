@@ -6,6 +6,8 @@ import json
 import sys
 import os
 
+DO_TEST = False # if True, put the final samples in a  /snt/test/ dir so we don't screw anything
+
 instructions = "instructions_test.txt"
 if len(sys.argv) > 1:
     instructions = sys.argv[1]
@@ -29,6 +31,9 @@ for i in range(5000):
     # for existing samples, try to update params (xsec, kfact, etc.)
     for samp in u.read_samples(instructions):
         if samp not in all_samples:
+            if DO_TEST: 
+                samp["specialdir_test"] = True
+                print ">>> You have specified DO_TEST, so final samples will end up in snt/test/!"
             s = Samples.Sample(**samp) 
             all_samples.append(s)
         else:
