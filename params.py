@@ -9,8 +9,7 @@ campaign = "74X"
 
 if campaign == "74X":
     scram_arch="slc6_amd64_gcc491"
-    # cms3tag="CMS3_V07-04-12"
-    cms3tag="CMS3_V07-04-12_miniaodv1_FS"
+    cms3tag="CMS3_V07-04-12"
     cmssw_ver="CMSSW_7_4_14"
 
 elif campaign == "76X":
