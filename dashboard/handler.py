@@ -68,7 +68,8 @@ elif inp["action"] == "addinstructions":
     samples = [sample for sample in samples if len(sample.split()) >= 5]
 
 
-    fname = basedir + "instructions_autotupletest.txt"
+    # fname = basedir + "instructions_autotupletest.txt"
+    fname = basedir + "instructions.txt"
 
     if len(samples) < 1: sys.exit()
 

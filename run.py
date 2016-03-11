@@ -8,7 +8,7 @@ import os
 
 DO_TEST = False # if True, put the final samples in a  /snt/test/ dir so we don't screw anything
 
-instructions = "instructions_test.txt"
+instructions = "instructions.txt"
 if len(sys.argv) > 1:
     instructions = sys.argv[1]
     if not os.path.isfile(instructions):

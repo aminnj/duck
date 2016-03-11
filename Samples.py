@@ -448,7 +448,11 @@ class Sample:
             for status,jobs in stat["jobsPerStatus"].items():
                 self.sample["crab"]["breakdown"][status] = jobs
 
-        done_frac = 1.0*self.sample["crab"]["njobs"]/self.sample["crab"]["breakdown"]["finished"]
+        if self.sample["crab"]["breakdown"]["finished"] > 0:
+            done_frac = 1.0*self.sample["crab"]["njobs"]/self.sample["crab"]["breakdown"]["finished"]
+        else: 
+            done_frac = 0.0
+
         self.sample["crab"]["jobs_left"] = []
         self.sample["crab"]["jobs_left_tail"] = []
         if "jobs" in stat and "jobList" in stat:
@@ -477,7 +481,7 @@ class Sample:
 
         # print self.sample["crab"]["jobs_left"]
         # print self.sample["crab"]["jobs_left_tail"]
-        if self.do_skip_tail and self.sample["crab"]["jobs_left"] == self.sample["crab"]["jobs_left_tail"]:
+        if self.do_skip_tail and self.sample["crab"]["jobs_left"] == self.sample["crab"]["jobs_left_tail"] and (self.sample["crab"]["breakdown"]["finished"] > 0):
             # this means that all crab jobs left are jobs in the tail, so let's ignore them and forge onwards with merging
             self.do_log("there are %i tail jobs left that we will ignore from now on" % len(self.sample["crab"]["jobs_left_tail"]))
             self.misc["can_skip_tail"] = True
@@ -530,6 +534,8 @@ class Sample:
 
         if self.fake_crab_done: return True
         if "status" not in self.sample["crab"] or self.sample["crab"]["status"] != "COMPLETED": return False
+
+        print "here"
 
         self.handle_more_than_1k()
 
@@ -707,12 +713,18 @@ class Sample:
 
         # check is sample has already been done
         final_dir = self.sample["finaldir"]
+        print final_dir
         is_done = False
         if os.path.isdir(final_dir):
             files = [f for f in os.listdir(final_dir) if f.endswith(".root")]
             if len(files) > 0: is_done = True
 
-        self.do_log("NOTE: this sample is already in the final group area. move it to another folder if you want to remake it. skipping for now.")
+        if is_done:
+            self.do_log("NOTE: this sample is already in the final group area. move it to another folder if you want to remake it. skipping for now.")
+            return False
+
+
+        return True
 
         # self.do_log("hey! it looks like this sample already exists in the final hadoop directory.")
         # self.do_log("do you want to remake? [y/n] if you don't answer in 10 seconds, will assume no.")
