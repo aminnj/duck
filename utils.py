@@ -33,6 +33,7 @@ web_dir = "%s/public_html/%s/" % (os.getenv("HOME"), params.dashboard_name)
 def make_dashboard():
     if not os.path.isdir(web_dir): os.makedirs(web_dir)
     cmd("chmod 755 -R %s" % web_dir)
+    cmd("chmod 755 %s/*.py" % web_dir)
     cmd("cp -rp dashboard/* %s/" % web_dir)
     cmd("sed -i s#BASEDIR_PLACEHOLDER#%s/# %s/main.js" % (os.getcwd(), web_dir))
     print "http://uaf-6.t2.ucsd.edu/~%s/%s" % (os.getenv("USER"), web_dir.split("public_html/")[1])
