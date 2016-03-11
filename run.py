@@ -6,7 +6,7 @@ import json
 import sys
 import os
 
-DO_TEST = False # if True, put the final samples in a  /snt/test/ dir so we don't screw anything
+DO_TEST = True # if True, put the final samples in a  /snt/test/ dir so we don't screw anything
 
 instructions = "instructions.txt"
 if len(sys.argv) > 1:
