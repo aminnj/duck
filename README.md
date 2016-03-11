@@ -13,7 +13,7 @@
 - [x] Parse checkCMS3 output and remake stuff appropriately
 - [x] Be able to change xsec, kfact, efact before post-processing (through an updated instructions.txt)
 - [x] Copy metadata (AND json) to backup directory (right now, it's copied only to the final directory)
-- [ ] If merged files are already in the final directory, either warn users or mark job as done
+- [x] If merged files are already in the final directory, either warn users or mark job as done
 - [ ] Be able to nuke and resubmit job from dashboard
 - [x] Resubmit crab task if been bootstrapped or some other thing for longer than x minutes
 - [x] Don't wait on last x% of MC samples to finish up in crab (put a mask on the job number)
