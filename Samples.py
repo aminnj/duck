@@ -195,6 +195,8 @@ class Sample:
         if len(self.sample["sparms"]) > 0: self.sample["pset"] = params.pset_mc_fastsim
         if "FSPremix" in ds: self.sample["pset"] = params.pset_mc_fastsim
         if "FastAsympt" in ds: self.sample["pset"] = params.pset_mc_fastsim
+        if "/Run2015" in ds: self.sample["pset"] = params.pset_data
+        if "/Run2016" in ds: self.sample["pset"] = params.pset_data
         if self.sample["isdata"]: self.sample["pset"] = params.pset_data
 
         # figure out specialdir automatically
@@ -210,7 +212,7 @@ class Sample:
         self.sample["basedir"] = os.getcwd()+"/"
         self.sample["finaldir"] = "/hadoop/cms/store/group/snt/%s/%s/%s/" \
                 % (self.sample["specialdir"], self.sample["shortname"], self.sample["cms3tag"].split("_",1)[1])
-        self.pfx = self.sample["shortname"][:17] + "..."
+        self.pfx = self.sample["shortname"][:20] + "..."
 
 
     def update_params(self, d):
@@ -321,13 +323,15 @@ class Sample:
         # more robust check
         crablog = "%s/crab.log" % self.sample["crab"]["taskdir"]
         if os.path.isfile(crablog):
-            taskline = u.get("/bin/grep 'Success' -A 1 -m 1 %s | /bin/grep 'Task name'" % crablog)
-            uniquerequestname = taskline.split("Task name:")[1].strip()
-            self.sample["crab"]["uniquerequestname"] = uniquerequestname
-            self.sample["crab"]["datetime"] = uniquerequestname.split(":")[0].strip()
-            self.do_log("already submitted crab jobs")
-            self.sample["status"] = "crab"
-            return 1
+            try:
+                taskline = u.get("/bin/grep 'Success' -A 1 -m 1 %s | /bin/grep 'Task name'" % crablog)
+                uniquerequestname = taskline.split("Task name:")[1].strip()
+                self.sample["crab"]["uniquerequestname"] = uniquerequestname
+                self.sample["crab"]["datetime"] = uniquerequestname.split(":")[0].strip()
+                self.do_log("already submitted crab jobs")
+                self.sample["status"] = "crab"
+                return 1
+            except: pass
 
         try: 
             self.sample["nevents_DAS"] = u.dataset_event_count(self.sample["dataset"])["nevents"]
