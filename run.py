@@ -15,7 +15,7 @@ if len(sys.argv) > 1:
         print ">>> %s does not exist" % instructions
         sys.exit()
 
-if u.proxy_hours_left() < 30:
+if u.proxy_hours_left() < 60:
     print ">>> Proxy near end of lifetime, renewing."
     u.proxy_renew()
 

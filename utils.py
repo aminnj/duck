@@ -64,7 +64,8 @@ def proxy_renew():
     else: cmd("voms-proxy-init -hours 9876543:0 -out=%s" % cert_file)
 
 def get_proxy_file():
-    cert_file = "/home/users/{0}/.globus/proxy_for_{0}.file".format(os.getenv("USER"))
+    # cert_file = "/home/users/{0}/.globus/proxy_for_{0}.file".format(os.getenv("USER"))
+    cert_file = '/tmp/x509up_u%s' % str(os.getuid()) # TODO: check that this is the same as `voms-proxy-info -path`
     return cert_file
 
 def get_timestamp():
@@ -79,7 +80,7 @@ def dataset_event_count(dataset):
     b = StringIO.StringIO() 
     c = pycurl.Curl() 
     url = "https://cmsweb.cern.ch/dbs/prod/global/DBSReader/filesummaries?dataset=%s&validFileOnly=1" % dataset
-    cert = '/tmp/x509up_u%s' % str(os.getuid()) # TODO: check that this is the same as `voms-proxy-info -path`
+    cert = get_proxy_file()
     c.setopt(pycurl.URL, url) 
     c.setopt(pycurl.WRITEFUNCTION, b.write) 
     c.setopt(pycurl.CAPATH, '/etc/grid-security/certificates') 
@@ -91,6 +92,24 @@ def dataset_event_count(dataset):
         return { "nevents": ret[0]['num_event'], "filesize": ret[0]['file_size'], "nfiles": ret[0]['num_file'], "nlumis": ret[0]['num_lumi'] }
 
     return None
+
+def dataset_event_count_2(dataset):
+    # cmd(". /cvmfs/cms.cern.ch/crab3/crab-env-bootstrap.sh >& /dev/null")
+    from dbs.apis.dbsClient import DbsApi
+    url="https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
+    api=DbsApi(url=url)
+    output = api.listDatasets(dataset=dataset)
+
+    if(len(output)==1):
+        inp = output[0]['dataset']
+        info = api.listFileSummaries(dataset=inp)[0]
+        filesize = info['file_size']
+        nevents = info['num_event']
+        nlumis = info['num_lumi']
+        files = api.listFiles(dataset=dataset, detail=1, validFileOnly=1)
+        return {"nevents": nevents, "filesize": filesize, "nfiles": len(files), "nlumis": nlumis}
+
+    return {}
 
 def get_hadoop_name():
     # handle non-standard hadoop name mapping
@@ -109,11 +128,14 @@ if __name__=='__main__':
     # else:
     #     print "Proxy looks good"
 
+    print get_proxy_file()
+
     # print dataset_event_count('/SMS-T5ttcc_mGl-1025to1200_mLSP-0to1025_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15MiniAODv2-FastAsympt25ns_74X_mcRun2_asymptotic_v2-v1/MINIAODSIM')
     # print dataset_event_count('/DYJetsToLL_M-50_Zpt-150toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15DR74-Asympt25ns_MCRUN2_74_V9-v1/MINIAODSIM')
+    # print dataset_event_count_2('/DYJetsToLL_M-50_Zpt-150toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15DR74-Asympt25ns_MCRUN2_74_V9-v1/MINIAODSIM')
 
     # for samp in read_samples():
     #     print samp
     
-    make_dashboard()
+    # make_dashboard()
 
