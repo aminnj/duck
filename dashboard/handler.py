@@ -19,7 +19,6 @@ form = cgi.FieldStorage()
 print "Content-type:text/html\r\n"
 # inp = {"name": "", "username": "", "page": "Other", "otherPage": ""}
 inp = inputToDict(form)
-print inp
 # for some reason, can't use $USER, must do whoami
 status, user = commands.getstatusoutput("whoami")
 
@@ -38,12 +37,8 @@ if action in ["fetch", "update"]:
 
 
 if action == "fetch":
-    print "here in fetch before import"
     import twiki
-    print "here in fetch after import twiki"
     samples = twiki.get_samples(assigned_to=inp["name"], username=inp["username"], get_unmade=onlyUnmade, page=inp["page"])
-    print "here in fetch after samples"
-    print "samples:", samples
 
     if not samples:
         print "None"

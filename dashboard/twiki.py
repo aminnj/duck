@@ -10,8 +10,7 @@ def get_browser(page, username):
 
     if not os.path.isfile(password_file):
         print "Error: %s file does not exist. create it and chmod 600 it" % password_file
-    else:
-        print "[twiki] found password file"
+        sys.exit()
 
     if username.strip() == "":
         username = user
@@ -27,8 +26,6 @@ def get_browser(page, username):
     br.addheaders = [('User-agent', 'Firefox')]
     br.set_handle_robots( False )
 
-    print "[twiki] opened mechanize browser"
-    print "[twiki] navigating to %s" % (BASE_URL+page)
 
     try:
         br.open(BASE_URL+page)
@@ -43,7 +40,6 @@ def get_browser(page, username):
 
 def get_samples(assigned_to, username, get_unmade=True, page="Autotupletest"):
     br = get_browser(page, username)
-    print "[twiki] done with browser stuff"
     for link in br.links():
         if link.text.strip() == 'Raw View':
             br.follow_link(link)
@@ -54,7 +50,6 @@ def get_samples(assigned_to, username, get_unmade=True, page="Autotupletest"):
 
     samples = []
     columns = ["dataset", "filter_type", "nevents_in", "nevents_out", "xsec", "kfact", "efact", "gtag", "cms3tag", "location", "assigned", "comments"] 
-    print raw
     for iline,line in enumerate(raw.split("\n")):
         if line.count("|") is not 13 or "*Dataset*" in line: continue
 

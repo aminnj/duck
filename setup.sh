@@ -5,6 +5,7 @@ source /code/osgcode/cmssoft/cms/cmsset_default.sh
 export SCRAM_ARCH=$(python -c "import params; print params.scram_arch")
 export CMS3TAG=$(python -c "import params; print params.cms3tag")
 export CMSSW_VER=$(python -c "import params; print params.cmssw_ver")
+export DASHBASE=$(python -c "import params; print params.dashboard_name")
 export BASEDIR=`pwd`
 
 
@@ -46,4 +47,5 @@ if [ ! -e ~/public_html/.htaccess ]; then
     chmod 755 ~/public_html/.htaccess
 fi
 export DASHBOARD=$(python -c "import utils; utils.make_dashboard()")
+chmod -R 755 "$HOME/public_html/$DASHBASE/"
 echo "[setup] dashboard is at: $DASHBOARD"
