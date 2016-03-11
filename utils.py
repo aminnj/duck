@@ -78,7 +78,7 @@ def dataset_event_count(dataset):
     b = StringIO.StringIO() 
     c = pycurl.Curl() 
     url = "https://cmsweb.cern.ch/dbs/prod/global/DBSReader/filesummaries?dataset=%s&validFileOnly=1" % dataset
-    cert = '/tmp/x509up_u%s' % str(os.getuid())
+    cert = '/tmp/x509up_u%s' % str(os.getuid()) # TODO: check that this is the same as `voms-proxy-info -path`
     c.setopt(pycurl.URL, url) 
     c.setopt(pycurl.WRITEFUNCTION, b.write) 
     c.setopt(pycurl.CAPATH, '/etc/grid-security/certificates') 
@@ -90,6 +90,15 @@ def dataset_event_count(dataset):
         return { "nevents": ret[0]['num_event'], "filesize": ret[0]['file_size'], "nfiles": ret[0]['num_file'], "nlumis": ret[0]['num_lumi'] }
 
     return None
+
+def get_hadoop_name():
+    # handle non-standard hadoop name mapping
+    user = os.getenv("USER")
+    if user == "dsklein": user = "dklein"
+    elif user == "iandyckes": user = "gdyckes"
+    elif user == "mderdzinski": user = "mderdzin"
+    elif user == "rclsa": user = "rcoelhol"
+    return user
 
 if __name__=='__main__':
 

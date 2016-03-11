@@ -6,7 +6,7 @@
 * Use the dashboard to create an `instructions.txt` file (or make it manually following the format of `instructions_test.txt`
 * At this point, I prefer to start a screen and then make sure to `source setup.sh` (maybe a couple of times until it doesn't complain).
 * `python run.py instructions.txt`
-* Sit back and relax
+* Sit quack and relax
 
 ## TODO:
 - [x] Check that nothing happened to the files after copying (don't need to do full blown checkCMS3, just check event counts or something)
@@ -24,3 +24,5 @@
 - [x] If crab status hasn't run yet, we'll have 0 running / 0 total, so monitor page shows NaN%. Force this to 0%.
 - [ ] Make tester class
 - [x] Add example instructions.txt
+- [ ] Grep condor logfiles to get timing statistics for merging/branchadding/copying
+- [x] Handle odd hadoop mappings

@@ -45,13 +45,17 @@ echo "[merge wrapper] current files in directory:"
 echo `ls -l`
 
 # merge and add branches
+echo "[merge wrapper] t before mergeScript.C: $(date +%s)"
 root -b -q -l "mergeScript.C (\"$inputDir\",\"$inputIndices\",\"merged_ntuple.root\")"
+echo "[merge wrapper] t before addBranches.C: $(date +%s)"
 root -b -q -l "addBranches.C (\"$inFile\",\"$outFile\",$nevents,$nevents_effective,$xsec,$kfactor,$filtEff)"
+echo "[merge wrapper] t after addBranches.C: $(date +%s)"
 
 # stageout
 localFile=$(pwd)/$outFile
 echo "[merge wrapper] copying file from $localFile to $outDir/$outFile"
 lcg-cp -b -D srmv2 --vo cms --verbose file:$localFile srm://bsrm-3.t2.ucsd.edu:8443/srm/v2/server?SFN=$outDir/$outFile
+echo "[merge wrapper] t after lcg-cp: $(date +%s)"
 
 # cleanup
 echo "[merge wrapper] cleaning up."

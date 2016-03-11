@@ -65,7 +65,7 @@ class Sample:
                 "basedir" : "",
                 "dataset" : dataset,
                 "shortname": dataset.split("/")[1]+"_"+dataset.split("/")[2],
-                "user" : os.getenv("USER"), #FIXME: for people with different hadoop mapping, only need to change this
+                "user" : u.get_hadoop_name(),
                 "cms3tag" : params.cms3tag,
                 "cmsswver" : params.cmssw_ver,
                 "gtag" : gtag,
@@ -329,7 +329,9 @@ class Sample:
             self.sample["status"] = "crab"
             return 1
 
-        try: self.sample["nevents_DAS"] = u.dataset_event_count(self.sample["dataset"])["nevents"]
+        try: 
+            self.sample["nevents_DAS"] = u.dataset_event_count(self.sample["dataset"])["nevents"]
+            self.do_log("sample has %i events according to DAS/DBS" % self.sample["nevents_DAS"])
         except: pass
 
         try:
@@ -470,7 +472,7 @@ class Sample:
 
                     self.sample["crab"]["jobs_left"].append(ijob)
 
-                    if nretries > 2 and done_frac > 0.95:
+                    if nretries > 3 and done_frac > 0.97:
                         self.sample["crab"]["jobs_left_tail"].append(ijob)
 
         # print self.sample["crab"]["jobs_left"]
@@ -659,7 +661,7 @@ class Sample:
                 if is_bad: continue
                 tot_size += file_size
                 group.append(ijob)
-                if tot_size >= 4.5: # in GB!
+                if tot_size >= 4.7: # in GB!
                     groups.append(group)
                     group = []
                     tot_size = 0.0
@@ -699,29 +701,31 @@ class Sample:
         return set(map(lambda x: int(x.split("_")[-1].split(".")[0]), files))
 
 
-    # def pass_tsa_prechecks(self):
-    #     if self.misc["handled_prechecks"]:
-    #         return self.misc["passed_prechecks"]
+    def pass_tsa_prechecks(self):
+        # if self.misc["handled_prechecks"]:
+        #     return self.misc["passed_prechecks"]
 
-    #     # check is sample has already been done
-    #     final_dir = self.sample["finaldir"]
-    #     is_done = False
-    #     if os.path.isdir(final_dir):
-    #         files = [f for f in os.listdir(final_dir) if f.endswith(".root")]
-    #         if len(files) > 0: is_done = True
+        # check is sample has already been done
+        final_dir = self.sample["finaldir"]
+        is_done = False
+        if os.path.isdir(final_dir):
+            files = [f for f in os.listdir(final_dir) if f.endswith(".root")]
+            if len(files) > 0: is_done = True
 
-    #     self.do_log("hey! it looks like this sample already exists in the final hadoop directory.")
-    #     self.do_log("do you want to remake? [y/n] if you don't answer in 10 seconds, will assume no.")
-    #     i, o, e = select.select( [sys.stdin], [], [], 10 )
-    #     if i:
-    #         inp = sys.stdin.readline().strip()
-    #         if "y" in inp.lower():
-    #             self.do_log("ok, will continue and remake it")
-    #     else:
-    #         self.do_log("you ignored me. will not remake. sample will be put in 'done' status now")
-    #         self.sample["status"] = "done"
+        self.do_log("NOTE: this sample is already in the final group area. move it to another folder if you want to remake it. skipping for now.")
 
-    #     self.misc["handled_prechecks"] = True
+        # self.do_log("hey! it looks like this sample already exists in the final hadoop directory.")
+        # self.do_log("do you want to remake? [y/n] if you don't answer in 10 seconds, will assume no.")
+        # i, o, e = select.select( [sys.stdin], [], [], 10 )
+        # if i:
+        #     inp = sys.stdin.readline().strip()
+        #     if "y" in inp.lower():
+        #         self.do_log("ok, will continue and remake it")
+        # else:
+        #     self.do_log("you ignored me. will not remake. sample will be put in 'done' status now")
+        #     self.sample["status"] = "done"
+
+        # self.misc["handled_prechecks"] = True
 
     def is_merging_done(self):
         # want 0 running condor jobs and all merged files in output area
@@ -846,7 +850,7 @@ class Sample:
 
         # mirror the central snt directory structure for metadata files
         metadatabank_dir = "/nfs-7/userdata/metadataBank/%s/%s/%s/" \
-                % (self.sample["specialdir"], self.sample["shortname"], self.sample["cms3tag"].split("_")[-1])
+                % (self.sample["specialdir"], self.sample["shortname"], self.sample["cms3tag"].split("_",1)[1])
 
         # copy txt to merged and backup. copy json to backup only
         u.cmd('chmod a+w %s %s' % (metadata_file, metadata_file_json))
@@ -901,6 +905,10 @@ class Sample:
         self.do_log("found %i total problems:" % tot_problems)
         for prob in problems:
             self.do_log("-- %s" % prob)
+
+        # if skipping tail, of course we will have problem with event mismatch, so subtract it out
+        if self.do_skip_tail:
+            tot_problems -= 1
 
         self.sample["checks"]["nproblems"] = tot_problems
         self.sample["checks"]["problems"] = problems
