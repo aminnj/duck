@@ -713,7 +713,7 @@ class Sample:
 
     def pass_tsa_prechecks(self):
         # if we already did this sample, clearly it passes prechecks
-        if self.misc["status"] == "done":
+        if self.sample["status"] == "done":
             return True
 
         # if self.misc["handled_prechecks"]:
