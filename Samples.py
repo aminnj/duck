@@ -539,7 +539,7 @@ class Sample:
         if self.fake_crab_done: return True
         if "status" not in self.sample["crab"] or self.sample["crab"]["status"] != "COMPLETED": return False
 
-        print "here"
+        # print "here"
 
         self.handle_more_than_1k()
 
@@ -717,7 +717,7 @@ class Sample:
 
         # check is sample has already been done
         final_dir = self.sample["finaldir"]
-        print final_dir
+        # print final_dir
         is_done = False
         if os.path.isdir(final_dir):
             files = [f for f in os.listdir(final_dir) if f.endswith(".root")]
