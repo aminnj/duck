@@ -923,7 +923,7 @@ class Sample:
             self.do_log("-- %s" % prob)
 
         # if skipping tail, of course we will have problem with event mismatch, so subtract it out
-        if self.do_skip_tail:
+        if self.do_skip_tail and tot_problems > 0:
             tot_problems -= 1
 
         self.sample["checks"]["nproblems"] = tot_problems
